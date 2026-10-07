@@ -1,0 +1,801 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Property Steward</title>
+<style>
+  :root{
+    --bg:#f6f5f1; --card:#ffffff; --ink:#1c1b18; --muted:#6b6a63;
+    --line:#e5e3db; --accent:#2f5d4f; --accent-ink:#ffffff; --accent-soft:#eaf1ee;
+    --red:#c0392b; --yellow:#c98a12; --green:#3d7a4d; --blue:#2d5f8a;
+    --danger-bg:#fdecea; --danger-ink:#8a2c22; --note-bg:#fff8e6; --note-line:#e9d9a0; --note-ink:#6b5410;
+    --field-bg:#ffffff;
+  }
+  @media (prefers-color-scheme: dark){
+    :root{
+      --bg:#14150f; --card:#1e1f18; --ink:#ecebe4; --muted:#a09f94;
+      --line:#34352b; --accent:#6aa692; --accent-ink:#10150f; --accent-soft:#223229;
+      --red:#ec7b6d; --yellow:#e2b04a; --green:#7fc08f; --blue:#7fb2dc;
+      --danger-bg:#3a1f1b; --danger-ink:#f0b3aa; --note-bg:#2e2815; --note-line:#524820; --note-ink:#e3d08a;
+      --field-bg:#17180f;
+    }
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+    padding:0 0 calc(84px + env(safe-area-inset-bottom));}
+  button,input,select,textarea{font-family:inherit;color:inherit;}
+  header{padding:18px 18px 4px;max-width:520px;margin:0 auto;}
+  h1{font-size:19px;margin:0 0 2px;font-weight:600;}
+  .sub{color:var(--muted);font-size:13px;margin:0;}
+  main{max-width:520px;margin:0 auto;padding:0 16px;}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px;margin-top:14px;}
+  label.lbl{display:block;font-size:12px;font-weight:600;color:var(--muted);
+    text-transform:uppercase;letter-spacing:.03em;margin-bottom:6px;}
+  textarea,input[type=text],input[type=number],input[type=date],select{
+    width:100%;border:1px solid var(--line);border-radius:10px;padding:10px 12px;font-size:16px;background:var(--field-bg);}
+  textarea{min-height:90px;resize:vertical;}
+  .seg{display:flex;gap:8px;}
+  .seg button{flex:1;padding:10px;border-radius:10px;border:1px solid var(--line);
+    background:var(--card);font-size:14px;font-weight:600;color:var(--muted);}
+  .seg button.active{background:var(--accent);color:var(--accent-ink);border-color:var(--accent);}
+  .who{margin-top:14px;}
+  .photo-row{display:flex;gap:10px;align-items:center;margin-top:14px;}
+  .photo-btn{flex:1;padding:12px;border-radius:10px;border:1px dashed var(--line);
+    background:var(--bg);font-size:14px;color:var(--muted);text-align:center;cursor:pointer;margin:0;
+    text-transform:none;letter-spacing:0;font-weight:400;}
+  #photoPreview{width:56px;height:56px;border-radius:8px;display:none;object-fit:cover;}
+  input[type=file]{display:none;}
+  .chips{display:flex;flex-wrap:wrap;gap:8px;}
+  .chips button{padding:7px 12px;border-radius:999px;border:1px solid var(--line);
+    background:var(--card);font-size:13px;}
+  .chips button.active{background:var(--accent-soft);border-color:var(--accent);color:var(--accent);}
+  .btn{width:100%;margin-top:16px;padding:14px;border:none;border-radius:12px;
+    background:var(--accent);color:var(--accent-ink);font-size:16px;font-weight:600;}
+  .btn:disabled{opacity:.5;}
+  .btn.ghost{background:var(--card);color:var(--muted);border:1px solid var(--line);margin-top:10px;font-size:14px;padding:11px;}
+  .btn.small{width:auto;margin:0;padding:8px 14px;font-size:13px;border-radius:9px;}
+  .warn{margin-top:10px;padding:10px 12px;border-radius:10px;background:var(--danger-bg);color:var(--danger-ink);font-size:13px;display:none;}
+  .warn.show{display:block;}
+  .note{margin-top:10px;padding:10px 12px;border-radius:10px;background:var(--note-bg);border:1px solid var(--note-line);color:var(--note-ink);font-size:13px;}
+  .status{text-align:center;color:var(--muted);font-size:13px;margin-top:12px;min-height:18px;}
+  .pill{display:inline-block;padding:2px 8px;border-radius:999px;font-size:11px;font-weight:600;white-space:nowrap;}
+  .pill.red{background:color-mix(in srgb,var(--red) 16%,transparent);color:var(--red);}
+  .pill.yellow{background:color-mix(in srgb,var(--yellow) 18%,transparent);color:var(--yellow);}
+  .pill.green{background:color-mix(in srgb,var(--green) 16%,transparent);color:var(--green);}
+  .pill.blue{background:color-mix(in srgb,var(--blue) 16%,transparent);color:var(--blue);}
+  .pill.grey{background:var(--line);color:var(--muted);}
+
+  /* draft cards */
+  .draft h2{font-size:15px;margin:0 0 4px;}
+  .draft .hint{font-size:13px;color:var(--muted);margin:0 0 6px;}
+  .item{border:1px solid var(--line);border-radius:12px;padding:12px;margin-top:12px;}
+  .item.off{opacity:.45;}
+  .item-head{display:flex;gap:10px;align-items:center;margin-bottom:8px;font-weight:600;font-size:14px;}
+  .item-head input{width:20px;height:20px;}
+  .field{display:flex;gap:10px;padding:7px 0;border-top:1px solid var(--line);align-items:center;}
+  .field .k{font-size:12px;color:var(--muted);width:34%;flex:none;}
+  .field .v{flex:1;min-width:0;font-size:14px;}
+  .field .v input,.field .v select,.field .v textarea{font-size:14px;padding:7px 9px;border-radius:8px;}
+  .field .v textarea{min-height:56px;}
+  .draftbtns{display:flex;gap:10px;margin-top:14px;}
+  .draftbtns button{flex:1;padding:12px;border-radius:10px;font-size:14px;font-weight:600;border:1px solid var(--line);background:var(--card);color:var(--muted);}
+  .draftbtns .confirm{background:var(--accent);color:var(--accent-ink);border-color:var(--accent);}
+  .draftbtns button:disabled{opacity:.5;}
+
+  /* ask */
+  .qa{margin-top:14px;}
+  .qa .q{font-size:13px;color:var(--muted);margin-bottom:6px;}
+  .qa .a{white-space:pre-wrap;font-size:15px;line-height:1.45;}
+  .qa .meta{margin-top:10px;display:flex;flex-wrap:wrap;gap:6px;align-items:center;}
+  .ask-row{display:flex;gap:8px;}
+  .ask-row input{flex:1;}
+  .ask-row button{padding:0 16px;border:none;border-radius:10px;background:var(--accent);color:var(--accent-ink);font-weight:600;font-size:15px;}
+  .ask-row button:disabled{opacity:.5;}
+
+  /* buying */
+  .match{border:1px solid var(--line);border-radius:12px;padding:12px;margin-top:10px;}
+  .match .t{font-weight:600;font-size:14px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;}
+  .match p{margin:6px 0 0;font-size:13.5px;line-height:1.4;}
+  .match .verify{color:var(--note-ink);}
+  .headline{font-size:16px;font-weight:600;line-height:1.35;}
+
+  /* open list */
+  .row{padding:12px 0;border-top:1px solid var(--line);display:flex;gap:10px;align-items:flex-start;}
+  .row:first-child{border-top:none;}
+  .row .main{flex:1;min-width:0;}
+  .row .title{font-size:15px;font-weight:600;}
+  .row .meta{font-size:12.5px;color:var(--muted);margin-top:3px;display:flex;flex-wrap:wrap;gap:6px;align-items:center;}
+  .row .done{border:1px solid var(--line);background:var(--card);border-radius:8px;padding:6px 10px;font-size:12px;font-weight:600;color:var(--muted);}
+  .toolbar{display:flex;gap:8px;align-items:center;justify-content:space-between;margin-top:12px;}
+  .toolbar select{width:auto;font-size:14px;padding:7px 10px;}
+  .empty{color:var(--muted);font-size:14px;text-align:center;padding:18px 0;}
+
+  nav{position:fixed;left:0;right:0;bottom:0;background:var(--card);border-top:1px solid var(--line);
+    display:flex;padding-bottom:env(safe-area-inset-bottom);z-index:5;}
+  nav button{flex:1;padding:10px 4px 9px;border:none;background:none;font-size:11.5px;font-weight:600;color:var(--muted);}
+  nav button .ic{display:block;font-size:19px;margin-bottom:1px;}
+  nav button.active{color:var(--accent);}
+  /* desktop: tabs move to a compact bar at the top, centered over the content column */
+  @media(min-width:768px){
+    body{padding:56px 0 40px;}
+    nav{top:0;bottom:auto;border-top:none;border-bottom:1px solid var(--line);
+      justify-content:center;gap:6px;padding:8px 16px;}
+    nav button{flex:none;display:flex;align-items:center;gap:6px;padding:7px 16px;font-size:14px;border-radius:10px;cursor:pointer;}
+    nav button .ic{display:inline;font-size:16px;margin:0;}
+    nav button.active{background:var(--accent-soft);}
+    .toast{bottom:24px;}
+  }
+  .setup{background:var(--note-bg);border:1px solid var(--note-line);color:var(--note-ink);font-size:12.5px;
+    padding:10px 14px;border-radius:10px;margin:12px 16px 0;max-width:488px;}
+  @media(min-width:552px){.setup{margin-left:auto;margin-right:auto;}}
+  .toast{position:fixed;left:16px;right:16px;bottom:calc(76px + env(safe-area-inset-bottom));background:var(--ink);color:var(--bg);
+    padding:12px 16px;border-radius:12px;font-size:14px;text-align:center;opacity:0;pointer-events:none;
+    transform:translateY(12px);transition:all .25s ease;max-width:520px;margin:0 auto;z-index:6;}
+  .toast.show{opacity:1;transform:translateY(0);}
+  [hidden]{display:none!important;}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Property Steward</h1>
+  <p class="sub">Nothing gets saved until you've seen it.</p>
+</header>
+
+<div id="setupBanner" class="setup" hidden>
+  Demo mode — not connected to the sheet yet, so answers are canned and nothing is saved.
+  Set <code>CONFIG.ENDPOINT_URL</code> to your deployed Apps Script URL to go live.
+</div>
+
+<main>
+  <div class="who">
+    <label class="lbl">Who's using this</label>
+    <div class="seg" id="who">
+      <button type="button" data-who="Abe">Abe</button>
+      <button type="button" data-who="Donica">Donica</button>
+      <button type="button" data-who="Luke">Luke</button>
+    </div>
+  </div>
+
+  <!-- ============ ADD ============ -->
+  <section id="tab-add" class="panel">
+    <div id="captureCard" class="card">
+      <label class="lbl">What's going on</label>
+      <textarea id="textInput" placeholder="e.g. Hot Mini lock jammed again — and the Morton toilet still bubbles. Or just drop a photo of a pile."></textarea>
+
+      <div class="photo-row">
+        <label class="photo-btn" for="photoInput" id="photoLabel">📷 Add a photo</label>
+        <input type="file" id="photoInput" accept="image/*">
+        <img id="photoPreview" alt="">
+      </div>
+
+      <label class="lbl" style="margin-top:14px;">Property (optional — I'll work it out if you skip it)</label>
+      <div class="chips" id="propChips"></div>
+
+      <div id="codeWarn" class="warn">
+        Heads up — this looks like it might have a door code, combo, or password in it.
+        Codes never go in the Steward; text them to Loren directly. I'll leave that part out.
+      </div>
+
+      <div id="askNudge" class="note" hidden>
+        That looks like a question. The Ask tab answers questions from your sheet; this tab adds new items.
+        <div class="draftbtns" style="margin-top:10px;">
+          <button type="button" id="nudgeAsk" class="confirm">Ask it instead</button>
+          <button type="button" id="nudgeLog">Log it anyway</button>
+        </div>
+      </div>
+
+      <button class="btn" id="sendBtn">Read it</button>
+      <div class="status" id="statusLine"></div>
+    </div>
+
+    <div id="draftCard" class="card draft" hidden>
+      <h2 id="draftTitle">Here's what I've got</h2>
+      <p class="hint">Fix anything that's off. Untick anything you don't want saved.</p>
+      <div id="draftNotes"></div>
+      <div id="draftItems"></div>
+      <div class="draftbtns">
+        <button id="draftCancel">Discard</button>
+        <button class="confirm" id="draftConfirm">Save</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ ASK ============ -->
+  <section id="tab-ask" class="panel" hidden>
+    <div class="card">
+      <label class="lbl">Ask the Steward</label>
+      <div class="ask-row">
+        <input type="text" id="askInput" placeholder="When was the roof replaced?" enterkeyhint="send">
+        <button id="askBtn">Ask</button>
+      </div>
+      <div class="chips" id="askChips" style="margin-top:12px;"></div>
+      <div id="askWarn" class="warn">Codes and passwords aren't kept here — ask Loren.</div>
+    </div>
+    <div id="askLog"></div>
+  </section>
+
+  <!-- ============ BUYING ============ -->
+  <section id="tab-buy" class="panel" hidden>
+    <div class="card">
+      <label class="lbl">Before you buy it</label>
+      <input type="text" id="buyInput" placeholder="e.g. 2 door locks, or a 52 in. ceiling fan" enterkeyhint="send">
+      <label class="lbl" style="margin-top:12px;">Where is it needed? (optional)</label>
+      <select id="buyProp"></select>
+      <button class="btn" id="buyBtn">Do we already have it?</button>
+      <div class="status" id="buyStatus"></div>
+    </div>
+    <div id="buyResult"></div>
+  </section>
+
+  <!-- ============ OPEN ============ -->
+  <section id="tab-open" class="panel" hidden>
+    <div class="card">
+      <div class="chips" id="viewChips"></div>
+      <div class="toolbar">
+        <select id="viewProp"></select>
+        <button class="btn small" id="copyList">Copy list</button>
+      </div>
+      <div id="viewWarn"></div>
+      <div id="viewList" style="margin-top:8px;"></div>
+    </div>
+  </section>
+</main>
+
+<nav>
+  <button data-tab="add" class="active"><span class="ic">＋</span>Add</button>
+  <button data-tab="ask"><span class="ic">💬</span>Ask</button>
+  <button data-tab="buy"><span class="ic">🛒</span>Buying?</button>
+  <button data-tab="open"><span class="ic">📋</span>Open</button>
+</nav>
+
+<div class="toast" id="toast" role="status"></div>
+
+<script>
+/* ---------- CONFIG ---------- */
+const CONFIG = {
+  // Paste your deployed Apps Script Web App URL, e.g. "https://script.google.com/macros/s/AKfycb.../exec"
+  // The Anthropic API key does NOT go here — it lives in the Apps Script's Script Properties.
+  ENDPOINT_URL: "https://script.google.com/macros/s/AKfycbwmAjcnLHTJdNbKTXnsIYWnALbwhO1x0S8Uxi3TWOJsdM7rBg7uFlhjjb2t1vX2Zd8/exec",
+  // The passphrase is NOT in this file (the site is public). Each device is asked for it once and
+  // keeps it in localStorage. It must match APP_SHARED_SECRET in the Script Properties.
+};
+const DEMO_MODE = !CONFIG.ENDPOINT_URL;
+
+const DEFAULT_PROPS = ['Seal Rock','Lebanon rentals','Morton','Mary St','Nelson','Sodaville','Hobbs','Santiam Hwy','6th st'];
+const PRIORITIES = ['1 Now','2 Soon','3 Eventually'];
+const HANDLED = ['In-House','Hire Out','Undecided'];
+const DEFAULT_ASSIGNEES = ['Abe','Donica','Shane','Unassigned'];
+
+/* ---------- state ---------- */
+let who = null, selectedProp = null, photoData = null, currentDraft = null;
+let props = DEFAULT_PROPS.slice();
+let opts = { log:{}, inventory:{} };
+let askHistory = [];
+let viewData = null, viewFilter = 'red', lastCheckText = '';
+
+const $ = id => document.getElementById(id);
+function store(k, v){ try { if (v === undefined) return localStorage.getItem(k); localStorage.setItem(k, v); } catch(e){ return null; } }
+
+if (DEMO_MODE) $('setupBanner').hidden = false;
+
+/* ---------- helpers ---------- */
+function escapeHtml(s){
+  return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+function showToast(msg){
+  const t = $('toast'); t.textContent = msg; t.classList.add('show');
+  clearTimeout(showToast._t); showToast._t = setTimeout(() => t.classList.remove('show'), 2800);
+}
+function looksLikeCredential(text){
+  // Courtesy warning only — the server redacts deterministically too.
+  return /\b(code|combo|combination|password|passcode|pin)\b[^.\n]{0,20}\b\d{3,8}\b/i.test(text)
+      || /\b\d{3,8}\b[^.\n]{0,20}\b(code|combo|combination|password|passcode|pin)\b/i.test(text);
+}
+function prioClass(p){ return /1\s*now/i.test(p) ? 'red' : /2\s*soon/i.test(p) ? 'yellow' : 'green'; }
+function prioRank(p){ return /1\s*now/i.test(p) ? 1 : /2\s*soon/i.test(p) ? 2 : 3; }
+function plainPrio(p){ return String(p||'').replace(/[^\w\s]/g,'').trim() || '—'; }
+async function copyText(text){
+  try { await navigator.clipboard.writeText(text); showToast('Copied.'); }
+  catch(e){ showToast("Couldn't copy — select the text and copy it by hand."); }
+}
+
+function getPassphrase(ask){
+  let p = store('steward.pass');
+  if (!p && ask) {
+    p = (window.prompt('Enter the Steward passphrase:') || '').trim();
+    if (p) store('steward.pass', p);
+  }
+  return p || '';
+}
+async function api(action, extra, retried){
+  const payload = Object.assign({ action, secret: DEMO_MODE ? '' : getPassphrase(true) }, extra || {});
+  if (DEMO_MODE) return demo[action](payload);
+  const res = await fetch(CONFIG.ENDPOINT_URL, {
+    method: 'POST',
+    headers: {'Content-Type': 'text/plain;charset=utf-8'}, // avoids an Apps Script CORS preflight
+    body: JSON.stringify(payload)
+  });
+  if (!res.ok) throw new Error('bad response');
+  const out = await res.json();
+  if (out && out.unauthorized) {
+    try { localStorage.removeItem('steward.pass'); } catch(e){}
+    if (!retried && payload.secret) { showToast('Wrong passphrase — try again.'); return api(action, extra, true); }
+  }
+  return out;
+}
+
+/* ---------- tabs ---------- */
+document.querySelectorAll('nav button').forEach(b => b.addEventListener('click', () => showTab(b.dataset.tab)));
+function showTab(name){
+  document.querySelectorAll('nav button').forEach(b => b.classList.toggle('active', b.dataset.tab === name));
+  document.querySelectorAll('.panel').forEach(p => p.hidden = p.id !== 'tab-' + name);
+  if (name === 'open') loadViews();
+  window.scrollTo(0, 0);
+}
+
+/* ---------- who ---------- */
+const savedWho = store('steward.who');
+document.querySelectorAll('#who button').forEach(btn => {
+  if (btn.dataset.who === savedWho) { who = savedWho; btn.classList.add('active'); }
+  btn.addEventListener('click', () => {
+    who = btn.dataset.who; store('steward.who', who);
+    document.querySelectorAll('#who button').forEach(b => b.classList.toggle('active', b === btn));
+  });
+});
+
+/* ---------- config from the sheet ---------- */
+function fillPropertyUI(){
+  $('propChips').innerHTML = props.map(p => `<button type="button" data-prop="${escapeHtml(p)}">${escapeHtml(p)}</button>`).join('');
+  $('propChips').querySelectorAll('button').forEach(btn => btn.addEventListener('click', () => {
+    selectedProp = selectedProp === btn.dataset.prop ? null : btn.dataset.prop;
+    $('propChips').querySelectorAll('button').forEach(b => b.classList.toggle('active', b.dataset.prop === selectedProp));
+  }));
+  const optsHtml = '<option value="">Any property</option>' + props.map(p => `<option>${escapeHtml(p)}</option>`).join('');
+  $('buyProp').innerHTML = optsHtml;
+  const keep = $('viewProp').value;
+  $('viewProp').innerHTML = optsHtml.replace('Any property', 'All properties');
+  $('viewProp').value = keep;
+}
+fillPropertyUI();
+// Deferred so the demo stand-ins (defined at the bottom of this script) exist first.
+window.addEventListener('DOMContentLoaded', () => {
+  api('config').then(c => {
+    if (c && c.ok) {
+      if (c.properties && c.properties.length) props = c.properties;
+      opts = c.options || opts;
+      fillPropertyUI();
+    }
+  }).catch(() => { /* fall back to the built-in list */ });
+});
+
+/* ============================== ADD ============================== */
+
+$('textInput').addEventListener('input', () => $('codeWarn').classList.toggle('show', looksLikeCredential($('textInput').value)));
+
+// Downscale before upload: phone photos are 3–8 MB; Apps Script and the AI do fine with ~1600px.
+function downscale(file){
+  return new Promise(resolve => {
+    const reader = new FileReader();
+    reader.onerror = () => resolve(null);
+    reader.onload = () => {
+      const url = reader.result;
+      const img = new Image();
+      img.onerror = () => resolve(fromDataUrl(url)); // e.g. HEIC the browser can't decode — send as-is
+      img.onload = () => {
+        try {
+          const max = 1600, scale = Math.min(1, max / Math.max(img.width, img.height));
+          const c = document.createElement('canvas');
+          c.width = Math.round(img.width * scale); c.height = Math.round(img.height * scale);
+          c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+          resolve(fromDataUrl(c.toDataURL('image/jpeg', 0.82)));
+        } catch(e){ resolve(fromDataUrl(url)); }
+      };
+      img.src = url;
+    };
+    reader.readAsDataURL(file);
+  });
+}
+function fromDataUrl(u){
+  const m = /^data:(.+?);base64,(.+)$/.exec(u);
+  return m ? { mime: m[1], base64: m[2], url: u } : null;
+}
+$('photoInput').addEventListener('change', async () => {
+  const file = $('photoInput').files[0];
+  if (!file) return;
+  $('photoLabel').textContent = 'Preparing photo…';
+  photoData = await downscale(file);
+  if (!photoData) { $('photoLabel').textContent = '📷 Add a photo'; showToast("Couldn't read that photo."); return; }
+  $('photoPreview').src = photoData.url; $('photoPreview').style.display = 'block';
+  $('photoLabel').textContent = '📷 Photo added — tap to change';
+});
+
+let skipNudge = false;
+$('textInput').addEventListener('input', () => { $('askNudge').hidden = true; skipNudge = false; });
+$('nudgeAsk').addEventListener('click', () => {
+  const q = $('textInput').value.trim();
+  $('textInput').value = ''; $('askNudge').hidden = true;
+  showTab('ask'); $('askInput').value = q; runAsk();
+});
+$('nudgeLog').addEventListener('click', () => { skipNudge = true; $('askNudge').hidden = true; $('sendBtn').click(); });
+
+$('sendBtn').addEventListener('click', async () => {
+  const text = $('textInput').value.trim();
+  if (!text && !photoData) { $('statusLine').textContent = 'Add a note or a photo first.'; return; }
+  // A message ending in "?" is almost always a question for the Ask tab — check before spending an AI call.
+  if (!photoData && !skipNudge && /\?\s*$/.test(text)) { $('askNudge').hidden = false; return; }
+  skipNudge = false;
+  $('sendBtn').disabled = true;
+  $('statusLine').textContent = photoData ? 'Reading the photo…' : 'Reading it…';
+  try {
+    const draft = await api('draft', {
+      text, reporter: who, propertyHint: selectedProp,
+      photoBase64: photoData && photoData.base64, photoMime: photoData && photoData.mime
+    });
+    if (draft.blocked) { $('statusLine').textContent = draft.reason || "That couldn't be processed — try rephrasing."; }
+    else { currentDraft = draft; renderDraft(draft); $('captureCard').hidden = true; $('draftCard').hidden = false; $('statusLine').textContent = ''; }
+  } catch (err) {
+    $('statusLine').textContent = "Couldn't reach the Steward — check your connection and try again.";
+  }
+  $('sendBtn').disabled = false;
+});
+
+function selectHtml(key, i, options, current, allowBlank){
+  const list = options.slice();
+  if (current && list.indexOf(current) < 0) list.unshift(current);
+  const blank = allowBlank ? '<option value="">— pick one —</option>' : '';
+  return `<select data-key="${key}" data-i="${i}">${blank}${list.map(o => `<option value="${escapeHtml(o)}" ${o === current ? 'selected' : ''}>${escapeHtml(o)}</option>`).join('')}</select>`;
+}
+function inputHtml(key, i, value, type){
+  return `<input type="${type || 'text'}" data-key="${key}" data-i="${i}" value="${escapeHtml(value)}">`;
+}
+function textHtml(key, i, value){
+  return `<textarea data-key="${key}" data-i="${i}">${escapeHtml(value)}</textarea>`;
+}
+function fld(label, html){ return `<div class="field"><div class="k">${label}</div><div class="v">${html}</div></div>`; }
+
+function renderDraft(d){
+  const notes = [];
+  if (d.notice) notes.push(`<div class="warn show">${escapeHtml(d.notice)}</div>`);
+  if (d.question) notes.push(`<div class="note">${escapeHtml(d.question)}</div>`);
+  $('draftNotes').innerHTML = notes.join('');
+  const n = d.items.length;
+  $('draftTitle').textContent = n === 1 ? "Here's what I've got" : `I found ${n} things`;
+  $('draftConfirm').textContent = n === 1 ? 'Looks right — save it' : 'Save the ticked ones';
+  $('draftItems').innerHTML = d.items.map(renderItem).join('');
+  $('draftItems').querySelectorAll('.inc').forEach(cb => {
+    cb.closest('.item').classList.toggle('off', !cb.checked);
+    cb.addEventListener('change', () => cb.closest('.item').classList.toggle('off', !cb.checked));
+  });
+  $('draftItems').querySelectorAll('select[data-key="recordType"]').forEach(sel => sel.addEventListener('change', () => {
+    syncDraftFromDom(); renderDraft(currentDraft);
+  }));
+}
+
+function renderItem(it, i){
+  const isInv = it.recordType === 'inventory';
+  const flags = [];
+  if (it.possibleDuplicateOf) flags.push(`<div class="note">Looks like it repeats an open one: <b>${escapeHtml(it.possibleDuplicateOf)}</b>. Untick this if it's the same thing.</div>`);
+  if (it.surplusMatch) flags.push(`<div class="note">You may already have something for this: ${escapeHtml(it.surplusMatch)} <i>(check before buying)</i></div>`);
+  const catList = (isInv ? opts.inventory : opts.log).category || [];
+
+  const common =
+    fld('Type', selectHtml('recordType', i, ['task','inventory'], it.recordType)) +
+    fld('Property' + (it.propertyConfidence === 'guessed' ? ' <span class="pill yellow">guessed</span>' : ''),
+        selectHtml('property', i, props, it.property, true)) +
+    fld('Category', catList.length ? selectHtml('category', i, catList, it.category, true) : inputHtml('category', i, it.category)) +
+    fld('Item', inputHtml('item', i, it.item));
+
+  let rest;
+  if (isInv) {
+    const unitList = opts.inventory.unit || [], condList = opts.inventory.condition || [];
+    const basis = { label:['green','read off label'], inferred:['yellow','inferred'], guessed:['red','guessed'], none:['grey','—'] }[it.specsBasis || 'none'] || ['grey','—'];
+    rest =
+      fld('Specs / model <span class="pill ' + basis[0] + '">' + basis[1] + '</span>', textHtml('specs', i, it.specs || it.detail)) +
+      fld('How many' + (it.qty == null ? ' <span class="pill grey">count it</span>' : ''), inputHtml('qty', i, it.qty == null ? '' : it.qty, 'number')) +
+      fld('Unit', unitList.length ? selectHtml('unit', i, unitList, it.unit, true) : inputHtml('unit', i, it.unit)) +
+      fld('Condition', condList.length ? selectHtml('condition', i, condList, it.condition, true) : inputHtml('condition', i, it.condition)) +
+      fld('Match key', inputHtml('matchKey', i, it.matchKey)) +
+      fld('Stored at', inputHtml('storedAt', i, it.storedAt || it.property));
+  } else {
+    const assignees = (opts.log.assignedTo && opts.log.assignedTo.length) ? opts.log.assignedTo : DEFAULT_ASSIGNEES;
+    rest =
+      fld('Detail', textHtml('detail', i, it.detail)) +
+      fld('Priority', selectHtml('priority', i, PRIORITIES, it.priority || '2 Soon')) +
+      fld('Safety / liability', selectHtml('safety', i, ['Yes','No'], it.safety || 'No')) +
+      fld('Handled by', selectHtml('handledBy', i, HANDLED, it.handledBy || 'Undecided')) +
+      fld('Assigned to', selectHtml('assignedTo', i, assignees, it.assignedTo || 'Unassigned')) +
+      fld('Needed by', inputHtml('neededBy', i, it.neededBy, 'date')) +
+      fld('Vendor', inputHtml('vendor', i, it.vendor));
+  }
+  return `<div class="item" data-i="${i}">
+    <div class="item-head"><input type="checkbox" class="inc" ${it._skip ? '' : 'checked'} aria-label="Save this one"> ${escapeHtml(it.item || 'Untitled')}</div>
+    ${flags.join('')}
+    ${common}${rest}
+    ${fld('Source', `<span style="color:var(--muted)">${escapeHtml(it.source)}</span>`)}
+  </div>`;
+}
+
+function syncDraftFromDom(){
+  $('draftItems').querySelectorAll('[data-key]').forEach(el => {
+    const it = currentDraft.items[Number(el.dataset.i)];
+    if (!it) return;
+    let v = el.value;
+    if (el.dataset.key === 'qty') v = v === '' ? null : Number(v);
+    it[el.dataset.key] = v;
+  });
+  $('draftItems').querySelectorAll('.item').forEach(card => {
+    currentDraft.items[Number(card.dataset.i)]._skip = !card.querySelector('.inc').checked;
+  });
+}
+
+$('draftCancel').addEventListener('click', resetForm);
+$('draftConfirm').addEventListener('click', async () => {
+  syncDraftFromDom();
+  const chosen = [];
+  $('draftItems').querySelectorAll('.item').forEach(card => {
+    if (card.querySelector('.inc').checked) chosen.push(currentDraft.items[Number(card.dataset.i)]);
+  });
+  if (!chosen.length) { showToast('Nothing ticked — discard it instead.'); return; }
+  const btn = $('draftConfirm'), label = btn.textContent;
+  btn.disabled = true; btn.textContent = 'Saving…';
+  try {
+    const result = await api('commit', { items: chosen, reporter: who });
+    if (result.ok) {
+      showToast(DEMO_MODE ? 'Saved (demo mode — not written to a sheet).' : `Saved ${result.saved} to the Steward.`);
+      viewData = null; resetForm();
+    } else {
+      btn.disabled = false; btn.textContent = label;
+      showToast(result.reason || "Couldn't save — try again.");
+    }
+  } catch (err) {
+    btn.disabled = false; btn.textContent = label;
+    showToast("Couldn't reach the Steward — your draft is still here.");
+  }
+});
+
+function resetForm(){
+  $('textInput').value = ''; photoData = null; $('photoInput').value = '';
+  $('photoPreview').style.display = 'none'; $('photoPreview').src = '';
+  $('photoLabel').textContent = '📷 Add a photo';
+  selectedProp = null; $('propChips').querySelectorAll('button').forEach(b => b.classList.remove('active'));
+  $('codeWarn').classList.remove('show');
+  currentDraft = null; $('draftCard').hidden = true; $('captureCard').hidden = false;
+  $('statusLine').textContent = ''; $('draftConfirm').disabled = false;
+}
+
+/* ============================== ASK ============================== */
+
+const ASK_SUGGESTIONS = ["What's red right now?", "What's waiting on a pro?", "Who services the HVAC?", "What do we have on the shelf?"];
+$('askChips').innerHTML = ASK_SUGGESTIONS.map(s => `<button type="button">${escapeHtml(s)}</button>`).join('');
+$('askChips').querySelectorAll('button').forEach(b => b.addEventListener('click', () => { $('askInput').value = b.textContent; runAsk(); }));
+$('askBtn').addEventListener('click', runAsk);
+$('askInput').addEventListener('keydown', e => { if (e.key === 'Enter') runAsk(); });
+$('askInput').addEventListener('input', () => $('askWarn').classList.toggle('show', looksLikeCredential($('askInput').value)));
+
+async function runAsk(){
+  const q = $('askInput').value.trim();
+  if (!q) return;
+  $('askBtn').disabled = true;
+  const card = document.createElement('div');
+  card.className = 'card qa';
+  card.innerHTML = `<div class="q">${escapeHtml(q)}</div><div class="a" style="color:var(--muted)">Looking…</div>`;
+  $('askLog').prepend(card);
+  try {
+    const r = await api('ask', { question: q, history: askHistory });
+    if (r.ok) {
+      const kc = { documented:'green', 'from memory':'yellow', 'not recorded':'grey', mixed:'blue' }[r.known] || 'grey';
+      card.innerHTML = `<div class="q">${escapeHtml(q)}</div><div class="a">${escapeHtml(r.answer)}</div>
+        ${r.dataNotes ? `<div class="note"><b>Heads up:</b> ${escapeHtml(r.dataNotes)}</div>` : ''}
+        <div class="meta"><span class="pill ${kc}">${escapeHtml(r.known)}</span>
+        ${(r.sources || []).map(s => `<span class="pill grey" title="${escapeHtml(s.tab)}">${escapeHtml(s.label)}</span>`).join('')}</div>`;
+      askHistory.push({ q, a: r.answer }); askHistory = askHistory.slice(-4);
+      $('askInput').value = '';
+    } else {
+      card.innerHTML = `<div class="q">${escapeHtml(q)}</div><div class="a">${escapeHtml(r.reason || "Couldn't answer that.")}</div>`;
+    }
+  } catch (e) {
+    card.innerHTML = `<div class="q">${escapeHtml(q)}</div><div class="a">Couldn't reach the Steward — try again.</div>`;
+  }
+  $('askBtn').disabled = false;
+}
+
+/* ============================== BUYING ============================== */
+
+$('buyBtn').addEventListener('click', runCheck);
+$('buyInput').addEventListener('keydown', e => { if (e.key === 'Enter') runCheck(); });
+
+const TIERS = {
+  exact: ['green', 'Same thing'],
+  substitute: ['yellow', 'Might work — check'],
+  repurpose: ['blue', 'Idea only']
+};
+async function runCheck(){
+  const text = $('buyInput').value.trim();
+  if (!text) { $('buyStatus').textContent = "Say what you're about to buy."; return; }
+  $('buyBtn').disabled = true; $('buyStatus').textContent = 'Checking the shelves and the order list…'; $('buyResult').innerHTML = '';
+  try {
+    const r = await api('check', { text, property: $('buyProp').value });
+    if (!r.ok) { $('buyStatus').textContent = r.reason || "Couldn't check that."; }
+    else {
+      $('buyStatus').textContent = '';
+      const lines = [r.headline];
+      let html = `<div class="card"><div class="headline">${escapeHtml(r.headline)}</div>`;
+      (r.onOrder || []).forEach(o => { html += `<div class="note">Already on order / on the list: ${escapeHtml(o)}</div>`; lines.push('On order: ' + o); });
+      (r.matches || []).forEach(m => {
+        const t = TIERS[m.tier] || TIERS.substitute;
+        html += `<div class="match"><div class="t"><span class="pill ${t[0]}">${t[1]}</span>${escapeHtml(m.item)}${m.qty ? ' · ' + escapeHtml(m.qty) : ''}${m.storedAt ? ' · ' + escapeHtml(m.storedAt) : ''}</div>
+          <p>${escapeHtml(m.why)}</p>
+          ${m.verify ? `<p class="verify">Check first: ${escapeHtml(m.verify)}</p>` : ''}
+          ${m.distanceNote ? `<p class="verify">${escapeHtml(m.distanceNote)}</p>` : ''}</div>`;
+        lines.push(`- ${m.item}${m.qty ? ' (' + m.qty + ')' : ''}${m.storedAt ? ' at ' + m.storedAt : ''}${m.verify ? ' — check: ' + m.verify : ''}`);
+      });
+      lastCheckText = lines.join('\n');
+      html += `<button class="btn ghost" id="copyCheck">Copy for the text thread</button></div>`;
+      $('buyResult').innerHTML = html;
+      $('copyCheck').addEventListener('click', () => copyText(lastCheckText));
+    }
+  } catch (e) { $('buyStatus').textContent = "Couldn't reach the Steward — try again."; }
+  $('buyBtn').disabled = false;
+}
+
+/* ============================== OPEN ============================== */
+
+const VIEWS = {
+  red:    { label: 'Red',          fn: t => prioRank(t.priority) === 1 },
+  abe:    { label: "Abe's",        fn: t => /abe/i.test(t.assignedTo) },
+  donica: { label: "Donica's",     fn: t => /donica/i.test(t.assignedTo) },
+  pro:    { label: 'Needs a pro',  fn: t => /hire/i.test(t.handledBy) },
+  safety: { label: 'Safety',       fn: t => /^y/i.test(t.safety) },
+  all:    { label: 'All open',     fn: () => true },
+  surplus:{ label: 'Surplus',      fn: null }
+};
+$('viewChips').innerHTML = Object.keys(VIEWS).map(k => `<button type="button" data-view="${k}">${VIEWS[k].label}</button>`).join('');
+$('viewChips').querySelectorAll('button').forEach(b => b.addEventListener('click', () => { viewFilter = b.dataset.view; renderViews(); }));
+$('viewProp').addEventListener('change', renderViews);
+
+async function loadViews(){
+  if (viewData) { renderViews(); return; }
+  $('viewList').innerHTML = '<div class="empty">Loading…</div>';
+  try {
+    const r = await api('views');
+    if (r.ok) { viewData = r; renderViews(); }
+    else $('viewList').innerHTML = `<div class="empty">${escapeHtml(r.reason || "Couldn't load the list.")}</div>`;
+  } catch (e) { $('viewList').innerHTML = '<div class="empty">Couldn\'t reach the Steward — try again.</div>'; }
+}
+
+function sameProp(a, b){ return !b || String(a).toLowerCase().indexOf(b.toLowerCase().split(' ')[0]) === 0 || String(a).toLowerCase() === b.toLowerCase(); }
+
+function renderViews(){
+  $('viewChips').querySelectorAll('button').forEach(b => b.classList.toggle('active', b.dataset.view === viewFilter));
+  if (!viewData) return;
+  const prop = $('viewProp').value;
+  $('viewWarn').innerHTML = '';
+
+  if (viewFilter === 'surplus') {
+    const rows = viewData.surplus.filter(s => sameProp(s.storedAt, prop));
+    $('viewList').innerHTML = rows.length ? rows.map(s => `
+      <div class="row"><div class="main"><div class="title">${escapeHtml(s.item)}</div>
+      <div class="meta">${s.qty ? `<span>${escapeHtml(s.qty)} ${escapeHtml(s.unit)}</span>` : '<span class="pill grey">count it</span>'}
+      ${s.storedAt ? `<span>· ${escapeHtml(s.storedAt)}</span>` : ''}</div>
+      ${s.specs ? `<div class="meta">${escapeHtml(s.specs)}</div>` : ''}</div></div>`).join('')
+      : '<div class="empty">Nothing on the shelf list yet.</div>';
+    return;
+  }
+
+  const all = viewData.tasks.filter(t => sameProp(t.property, prop));
+  const rows = all.filter(VIEWS[viewFilter].fn)
+    .sort((a, b) => prioRank(a.priority) - prioRank(b.priority) || String(a.property).localeCompare(b.property));
+
+  if (viewFilter === 'red' && rows.length > 5) {
+    $('viewWarn').innerHTML = `<div class="note">${rows.length} reds is a lot — more than about 5 usually means something is tagged too high.</div>`;
+  }
+  $('viewList').innerHTML = rows.length ? rows.map(t => {
+    const rot = /hire/i.test(t.handledBy) && (!t.assignedTo || /unassigned|undecided/i.test(t.assignedTo));
+    return `<div class="row" data-row="${t.row}">
+      <div class="main"><div class="title">${escapeHtml(t.item)}</div>
+        <div class="meta"><span class="pill ${prioClass(t.priority)}">${escapeHtml(plainPrio(t.priority))}</span>
+          <span>${escapeHtml(t.property)}</span>
+          ${/^y/i.test(t.safety) ? '<span class="pill red">safety</span>' : ''}
+          ${t.assignedTo ? `<span>· ${escapeHtml(t.assignedTo)}</span>` : ''}
+          ${t.neededBy ? `<span>· needed by ${escapeHtml(t.neededBy)}</span>` : ''}
+          ${rot ? '<span class="pill yellow">needs a pro, nobody called</span>' : ''}</div></div>
+      <button class="done" data-row="${t.row}">Done</button></div>`;
+  }).join('') : '<div class="empty">Nothing here. 🎉</div>';
+
+  $('viewList').querySelectorAll('.done').forEach(b => b.addEventListener('click', () => markDone(Number(b.dataset.row), b)));
+}
+
+async function markDone(row, btn){
+  const t = viewData.tasks.find(x => x.row === row);
+  if (!t || !confirm(`Mark done?\n\n${t.item}`)) return;
+  btn.disabled = true;
+  try {
+    const r = await api('complete', { row, item: t.item });
+    if (r.ok) { viewData.tasks = viewData.tasks.filter(x => x.row !== row); renderViews(); showToast('Marked done.'); }
+    else { btn.disabled = false; showToast(r.reason || "Couldn't update that one."); }
+  } catch (e) { btn.disabled = false; showToast("Couldn't reach the Steward."); }
+}
+
+$('copyList').addEventListener('click', () => {
+  if (!viewData) return;
+  if (viewFilter === 'surplus') {
+    return copyText(viewData.surplus.filter(s => sameProp(s.storedAt, $('viewProp').value))
+      .map(s => `${s.item}${s.qty ? ' (' + s.qty + ' ' + s.unit + ')' : ''}${s.storedAt ? ' — ' + s.storedAt : ''}`).join('\n'));
+  }
+  const prop = $('viewProp').value;
+  const rows = viewData.tasks.filter(t => sameProp(t.property, prop)).filter(VIEWS[viewFilter].fn)
+    .sort((a, b) => prioRank(a.priority) - prioRank(b.priority));
+  copyText(rows.map(t => prop ? t.item : `${t.property} — ${t.item}`).join('\n'));
+});
+
+/* ============================== DEMO MODE ============================== */
+// Local stand-ins that mirror code.gs's response shapes, so the whole UI can be clicked through
+// before an Apps Script endpoint exists. None of it touches a sheet.
+const wait = ms => new Promise(r => setTimeout(r, ms));
+const demoTasks = [
+  { row: 12, property: 'Seal Rock', item: 'Replace jammed Hot Mini lock', detail: '', priority: '🔴 1 Now', safety: 'Yes', handledBy: 'In-House', assignedTo: 'Abe', status: 'Open', neededBy: '' },
+  { row: 14, property: 'Morton', item: 'Electrical short — Jackie, still happening', detail: '', priority: '🔴 1 Now', safety: 'Yes', handledBy: 'Hire Out', assignedTo: 'Unassigned', status: 'Open', neededBy: '' },
+  { row: 15, property: 'Morton', item: 'Toilet bubbles when other fixtures drain', detail: '', priority: '🟡 2 Soon', safety: 'No', handledBy: 'Hire Out', assignedTo: 'Unassigned', status: 'Open', neededBy: '' },
+  { row: 21, property: 'Seal Rock', item: 'Staircase rail and trim rebuild', detail: '', priority: '🟡 2 Soon', safety: 'Yes', handledBy: 'In-House', assignedTo: 'Abe', status: 'In Progress', neededBy: '' },
+  { row: 22, property: 'Seal Rock', item: 'Septic fence', detail: '', priority: '🟢 3 Eventually', safety: 'No', handledBy: 'In-House', assignedTo: 'Abe', status: 'In Progress', neededBy: '' },
+  { row: 30, property: 'Santiam Hwy', item: 'Deck refinish (David)', detail: '', priority: '🟢 3 Eventually', safety: 'No', handledBy: 'Undecided', assignedTo: 'Donica', status: 'Open', neededBy: '' },
+  { row: 33, property: 'Seal Rock', item: 'Apt 1 turn clean', detail: '', priority: '🟡 2 Soon', safety: 'No', handledBy: 'Hire Out', assignedTo: 'Donica', status: 'Open', neededBy: '2026-09-07' }
+];
+const demoSurplus = [
+  { row: 3, item: 'Door lock handles', qty: '6', unit: 'each', specs: 'matching set (CONFIRM function and keying)', storedAt: 'Lebanon' },
+  { row: 4, item: 'Ceiling fans', qty: '4', unit: 'each', specs: '(MEASURE AND COUNT)', storedAt: 'Sodaville' },
+  { row: 5, item: 'Overhead lights', qty: '2', unit: 'each', specs: 'from a set of six', storedAt: 'Lebanon' }
+];
+const demo = {
+  async config(){ await wait(150); return { ok: true, properties: DEFAULT_PROPS, options: { log: {}, inventory: {} } }; },
+  async draft(p){
+    await wait(700);
+    const lines = (p.text || '').split(/\n|;|\band also\b/i).map(s => s.trim()).filter(Boolean);
+    const items = lines.map(l => {
+      const safety = /short|electrical|gas|leak|egress|handrail|lock.*(jam|stuck)|can'?t get (in|out)/i.test(l);
+      return {
+        recordType: 'task', property: p.propertyHint || '', propertyConfidence: p.propertyHint ? 'stated' : 'unknown',
+        category: 'Maintenance', item: l.slice(0, 60), detail: l, priority: safety ? '1 Now' : '2 Soon',
+        safety: safety ? 'Yes' : 'No', handledBy: 'Undecided', assignedTo: p.reporter || 'Unassigned', neededBy: '', vendor: '',
+        possibleDuplicateOf: /lock/i.test(l) ? 'Replace jammed Hot Mini lock' : '',
+        surplusMatch: /lock/i.test(l) ? '6 matching door lock handles at Lebanon (not confirmed keyed alike)' : '',
+        source: (p.reporter ? p.reporter + "'s message" : 'Captured via app') + ' — AI-drafted, confirmed by a person'
+      };
+    });
+    if (!items.length && p.photoBase64) items.push({
+      recordType: 'inventory', property: p.propertyHint || 'Sodaville', propertyConfidence: p.propertyHint ? 'stated' : 'guessed',
+      category: 'Lumber', item: 'Deck lumber offcuts', detail: '', specs: 'Pressure-treated, looks like 2x6 (inferred)', specsBasis: 'inferred',
+      qty: null, unit: '', condition: '', matchKey: 'DECK LUMBER', storedAt: p.propertyHint || 'Sodaville',
+      source: (p.reporter || 'Captured via app') + ' photo — AI-drafted, confirmed by a person'
+    });
+    return { items, question: '', notice: '' };
+  },
+  async commit(p){ await wait(400); return { ok: true, saved: p.items.length }; },
+  async views(){ await wait(250); return { ok: true, tasks: demoTasks.map(t => ({ ...t })), surplus: demoSurplus }; },
+  async complete(p){ await wait(250); return { ok: true }; },
+  async ask(p){
+    await wait(700);
+    const q = (p.question || '').toLowerCase();
+    if (/red|now/.test(q)) return { ok: true, answer: 'Two things are red: the jammed Hot Mini lock at Seal Rock (Abe), and the electrical short Jackie keeps reporting at Morton, which nobody has called a pro for yet.', known: 'documented', dataNotes: 'Shopping List row 2 (Hot Mini lock) still says Need, but the replacement was bought.', sources: [{ id: 'L12', tab: 'Master Log', label: 'Replace jammed Hot Mini lock' }, { id: 'L14', tab: 'Master Log', label: 'Electrical short — Morton' }] };
+    if (/hvac/.test(q)) return { ok: true, answer: "That isn't recorded. The Vendors & Contacts tab is the place for it.", known: 'not recorded', sources: [] };
+    if (/shelf|surplus|inventory/.test(q)) return { ok: true, answer: '6 door lock handles and 2 overhead lights at Lebanon, and 4 ceiling fans at Sodaville. The fan count still needs measuring.', known: 'mixed', sources: [{ id: 'I3', tab: 'Inventory', label: 'Door lock handles' }] };
+    return { ok: true, answer: "Demo mode gives canned answers. Try \"What's red right now?\"", known: 'not recorded', sources: [] };
+  },
+  async check(p){
+    await wait(700);
+    if (/lock/i.test(p.text)) return {
+      ok: true, headline: 'Hold off — 6 door lock handles are on the shelf at Lebanon, and 2 locks are already ordered.',
+      onOrder: ['2 door locks, Lebanon rentals — marked Ordered'],
+      matches: [{ id: 'I3', item: 'Door lock handles', qty: '6', storedAt: 'Lebanon', tier: 'substitute',
+        why: 'Same kind of item, but the sheet does not say which function they are or whether they are keyed alike.',
+        verify: 'Passage vs. entry, backset, and keyed alike?', distanceNote: '' }]
+    };
+    return { ok: true, headline: 'Nothing on hand matches — go ahead.', onOrder: [], matches: [] };
+  }
+};
+</script>
+</body>
+</html>
