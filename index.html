@@ -23,7 +23,7 @@
     --water:#2c6970;
     --red:#b13a2e; --yellow:#986a0d; --green:#3a7350; --blue:#2c6970;
     --danger-bg:#fbece8; --danger-ink:#8a2c22; --note-bg:#f7f1e1; --note-line:#e7d8ad; --note-ink:#5c4914;
-    --field-bg:#fbfcfb;
+    --field-bg:#fbfcfb; --on-prio:#ffffff;
     --koa:#9b5a2c; --bamboo:#e8d5a9; --mahogany:#5a2418;
     --carbon:#1b1f22; --carbon-ink:#9aa4a9; --carbon-hi:#ecc392;
     --shadow:0 1px 2px rgba(30,34,38,.04), 0 10px 28px -18px rgba(30,34,38,.22);
@@ -43,7 +43,7 @@
       --water:#7bbabf;
       --red:#ef8a7c; --yellow:#e0b45a; --green:#86c49a; --blue:#7bbabf;
       --danger-bg:#3a201c; --danger-ink:#f2b6ac; --note-bg:#2a251a; --note-line:#4b4126; --note-ink:#e6d39d;
-      --field-bg:#15191c;
+      --field-bg:#15191c; --on-prio:#15191c;
       --carbon:#0f1214;
       --shadow:0 1px 2px rgba(0,0,0,.2), 0 10px 28px -18px rgba(0,0,0,.7);
     }
@@ -91,6 +91,10 @@
   .chips button{padding:7px 14px;border-radius:999px;border:1px solid var(--line-strong);
     background:var(--card);font-size:13.5px;transition:background-color .15s, border-color .15s, color .15s;}
   .chips button.active{background:var(--accent-soft);border-color:var(--accent);color:var(--accent);font-weight:600;}
+  /* Add tab: a property takes the colour of its most pressing open task */
+  .chips button.p1{--pc:var(--red);} .chips button.p2{--pc:var(--yellow);} .chips button.p3{--pc:var(--green);}
+  .chips button.prio{background:color-mix(in srgb,var(--pc) 13%,var(--card));border-color:color-mix(in srgb,var(--pc) 55%,transparent);}
+  .chips button.prio.active{background:var(--pc);border-color:var(--pc);color:var(--on-prio);}
   .btn{width:100%;margin-top:18px;padding:15px;border:none;border-radius:14px;
     background:linear-gradient(180deg,var(--accent-hi),var(--accent));color:var(--accent-ink);font-size:16px;font-weight:600;letter-spacing:.01em;
     box-shadow:inset 0 1px 0 rgba(255,255,255,.16), 0 1px 2px rgba(0,0,0,.14);transition:filter .15s, transform .1s;}
@@ -160,7 +164,8 @@
   .empty{color:var(--muted);font-size:14.5px;text-align:center;padding:26px 0 18px;}
 
   @media (hover:hover){
-    .chips button:hover:not(.active), .photo-btn:hover, .row .done:hover{border-color:var(--accent);color:var(--accent);}
+    .chips button:hover:not(.active):not(.prio), .photo-btn:hover, .row .done:hover{border-color:var(--accent);color:var(--accent);}
+    .chips button.prio:hover:not(.active){border-color:var(--pc);}
     .btn:hover:not(:disabled), .draftbtns .confirm:hover, .ask-row button:hover:not(:disabled){filter:brightness(1.06);}
     .seg button:hover:not(.active){color:var(--ink);}
   }
@@ -548,6 +553,18 @@ function fillPropertyUI(){
   const keep = $('viewProp').value;
   $('viewProp').innerHTML = optsHtml.replace('Any property', 'All properties');
   $('viewProp').value = keep;
+  colorPropChips();
+}
+
+// Each property button on the Add tab takes the colour of its most pressing open task.
+function colorPropChips(){
+  $('propChips').querySelectorAll('button').forEach(b => {
+    const ranks = viewData ? viewData.tasks.filter(t => sameProp(t.property, b.dataset.prop)).map(t => prioRank(t.priority)) : [];
+    const top = ranks.length ? Math.min(...ranks) : 0;
+    b.classList.remove('prio', 'p1', 'p2', 'p3');
+    if (top) b.classList.add('prio', 'p' + top);
+    b.title = top ? 'Most pressing open task: ' + PRIORITIES[top - 1] : (viewData ? 'Nothing open' : '');
+  });
 }
 fillPropertyUI();
 // Deferred so the demo stand-ins (defined at the bottom of this script) exist first.
@@ -558,7 +575,8 @@ window.addEventListener('DOMContentLoaded', () => {
       opts = c.options || opts;
       fillPropertyUI();
     }
-  }).catch(() => { /* fall back to the built-in list */ });
+  }).catch(() => { /* fall back to the built-in list */ })
+    .then(loadViews); // open tasks, for the property colours on the Add tab
 });
 
 /* ============================== ADD ============================== */
@@ -735,7 +753,7 @@ $('draftConfirm').addEventListener('click', async () => {
     const result = await api('commit', { items: chosen, reporter: who });
     if (result.ok) {
       showToast(DEMO_MODE ? 'Saved (demo mode — not written to a sheet).' : `Saved ${result.saved} to the Steward.`);
-      viewData = null; resetForm();
+      viewData = null; resetForm(); loadViews();
     } else {
       btn.disabled = false; btn.textContent = label;
       showToast(result.reason || "Couldn't save — try again.");
@@ -859,6 +877,7 @@ async function loadViews(){
 function sameProp(a, b){ return !b || String(a).toLowerCase().indexOf(b.toLowerCase().split(' ')[0]) === 0 || String(a).toLowerCase() === b.toLowerCase(); }
 
 function renderViews(){
+  colorPropChips();
   $('viewChips').querySelectorAll('button').forEach(b => b.classList.toggle('active', b.dataset.view === viewFilter));
   if (!viewData) return;
   const prop = $('viewProp').value;
