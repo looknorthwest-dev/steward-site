@@ -106,6 +106,13 @@
   .warn{margin-top:12px;padding:11px 14px;border-radius:12px;background:var(--danger-bg);color:var(--danger-ink);font-size:13.5px;display:none;}
   .warn.show{display:block;}
   .note{margin-top:12px;padding:11px 14px;border-radius:12px;background:var(--note-bg);border:1px solid var(--note-line);color:var(--note-ink);font-size:13.5px;}
+  .said{padding:10px 14px;border-left:3px solid var(--koa);border-radius:0 12px 12px 0;background:var(--accent-soft);color:var(--muted);
+    font-size:14px;line-height:1.45;white-space:pre-wrap;display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;overflow:hidden;}
+  .said-k{font-size:12px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--muted);margin-bottom:6px;}
+  .askq{font-family:var(--serif);font-size:19px;line-height:1.3;margin:16px 0 10px;}
+  .askblock textarea,#draftAsk textarea{min-height:64px;}
+  .linkbtn{display:block;margin:12px auto 0;padding:4px 8px;border:none;background:none;color:var(--muted);font-size:13.5px;text-decoration:underline;}
+  #draftAsk{margin-top:12px;}
   .status{text-align:center;color:var(--muted);font-size:13.5px;margin-top:12px;min-height:18px;}
   .pill{display:inline-block;padding:2px 9px;border-radius:999px;font-size:11.5px;font-weight:600;line-height:1.5;white-space:nowrap;}
   .pill.red{background:color-mix(in srgb,var(--red) 14%,transparent);color:var(--red);}
@@ -254,6 +261,7 @@
   <!-- ============ ADD ============ -->
   <section id="tab-add" class="panel">
     <div id="captureCard" class="card">
+      <div id="composer">
       <label class="lbl">What's going on</label>
       <textarea id="textInput" placeholder="e.g. Hot Mini lock jammed again — and the Morton toilet still bubbles. Or just drop a photo of a pile."></textarea>
 
@@ -265,6 +273,16 @@
 
       <label class="lbl" style="margin-top:14px;">Property (optional — I'll work it out if you skip it)</label>
       <div class="chips" id="propChips"></div>
+      </div>
+
+      <div id="askBlock" class="askblock" hidden>
+        <div class="said-k">You said</div>
+        <div class="said" id="saidText"></div>
+        <p class="askq" id="askQuestion"></p>
+        <textarea id="answerInput" placeholder="Your answer" aria-label="Your answer"></textarea>
+        <button class="btn" id="answerBtn">Send</button>
+        <button type="button" class="linkbtn" id="editNote">Edit my note instead</button>
+      </div>
 
       <div id="codeWarn" class="warn">
         Heads up — this looks like it might have a door code, combo, or password in it.
@@ -287,6 +305,10 @@
       <h2 id="draftTitle">Here's what I've got</h2>
       <p class="hint">Fix anything that's off. Untick anything you don't want saved.</p>
       <div id="draftNotes"></div>
+      <div id="draftAsk" hidden>
+        <textarea id="draftAnswer" placeholder="Your answer" aria-label="Your answer"></textarea>
+        <div class="draftbtns"><button class="confirm" id="draftAnswerBtn">Answer and update</button></div>
+      </div>
       <div id="draftItems"></div>
       <div class="draftbtns">
         <button id="draftCancel">Discard</button>
@@ -384,6 +406,8 @@ const DEFAULT_ASSIGNEES = ['Abe','Donica','Shane','Unassigned'];
 
 /* ---------- state ---------- */
 let who = null, selectedProp = null, photoData = null, currentDraft = null;
+let baseText = '', qa = [], pendingQuestion = '';  // the original note, plus any question/answer rounds so far
+const MAX_ROUNDS = 2;
 let props = DEFAULT_PROPS.slice();
 let opts = { log:{}, inventory:{} };
 let askHistory = [];
@@ -629,25 +653,79 @@ $('nudgeAsk').addEventListener('click', () => {
 });
 $('nudgeLog').addEventListener('click', () => { skipNudge = true; $('askNudge').hidden = true; $('sendBtn').click(); });
 
-$('sendBtn').addEventListener('click', async () => {
+$('sendBtn').addEventListener('click', () => {
   const text = $('textInput').value.trim();
   if (!text && !photoData) { $('statusLine').textContent = 'Add a note or a photo first.'; return; }
   // A message ending in "?" is almost always a question for the Ask tab — check before spending an AI call.
   if (!photoData && !skipNudge && /\?\s*$/.test(text)) { $('askNudge').hidden = false; return; }
   skipNudge = false;
-  $('sendBtn').disabled = true;
-  $('statusLine').textContent = photoData ? 'Reading the photo…' : 'Reading it…';
+  baseText = text; qa = []; pendingQuestion = '';
+  runDraft();
+});
+
+function composedText(){
+  return baseText + qa.map(x => `\n\nQ: ${x.q}\nA: ${x.a}`).join('');
+}
+// Say something where the person is looking: under the button on the Add card, or a toast on the draft card.
+function say(msg){ if (!$('captureCard').hidden) $('statusLine').textContent = msg; else showToast(msg); }
+
+function showAsk(question){
+  pendingQuestion = question;
+  $('saidText').textContent = (baseText || 'Photo') + qa.map(x => ' ' + x.a).join('');
+  $('askQuestion').textContent = question;
+  $('answerInput').value = '';
+  $('composer').hidden = true; $('sendBtn').hidden = true; $('askBlock').hidden = false;
+  $('statusLine').textContent = '';
+  $('answerInput').focus();
+}
+function leaveAsk(){
+  $('askBlock').hidden = true; $('composer').hidden = false; $('sendBtn').hidden = false;
+}
+
+async function runDraft(){
+  const busy = [$('sendBtn'), $('answerBtn'), $('draftAnswerBtn')];
+  busy.forEach(b => b.disabled = true);
+  say(photoData ? 'Reading the photo…' : 'Reading it…');
   try {
     const draft = await api('draft', {
-      text, reporter: who, propertyHint: selectedProp,
+      text: composedText(), reporter: who, propertyHint: selectedProp,
       photoBase64: photoData && photoData.base64, photoMime: photoData && photoData.mime
     });
-    if (draft.blocked) { $('statusLine').textContent = draft.reason || "That couldn't be processed — try rephrasing."; }
-    else { currentDraft = draft; renderDraft(draft); $('captureCard').hidden = true; $('draftCard').hidden = false; $('statusLine').textContent = ''; }
+    if (draft.blocked) {
+      const reason = draft.reason || "That couldn't be processed — try rephrasing.";
+      const isQuestion = draft.asking || /\?\s*$/.test(reason);
+      if (isQuestion && qa.length < MAX_ROUNDS) { showAsk(reason); }
+      else if (isQuestion) {
+        // Two rounds and still not enough: hand the note back with the answers folded in.
+        $('textInput').value = baseText + ' ' + qa.map(x => x.a).join(' ');
+        leaveAsk(); $('captureCard').hidden = false; $('draftCard').hidden = true;
+        say("Still not enough for me to go on — add the missing detail to your note and try again.");
+      }
+      else { say(reason); }
+    } else {
+      currentDraft = draft; renderDraft(draft);
+      $('draftAsk').hidden = !(draft.question && qa.length < MAX_ROUNDS);
+      $('draftAnswer').value = '';
+      pendingQuestion = draft.question || '';
+      leaveAsk(); $('captureCard').hidden = true; $('draftCard').hidden = false; $('statusLine').textContent = '';
+    }
   } catch (err) {
-    $('statusLine').textContent = "Couldn't reach the Steward — check your connection and try again.";
+    say("Couldn't reach the Steward — check your connection and try again.");
   }
-  $('sendBtn').disabled = false;
+  busy.forEach(b => b.disabled = false);
+}
+
+function sendAnswer(input){
+  const a = input.value.trim();
+  if (!a) { say('Type your answer first.'); return; }
+  qa.push({ q: pendingQuestion, a });
+  runDraft();
+}
+$('answerBtn').addEventListener('click', () => sendAnswer($('answerInput')));
+$('draftAnswerBtn').addEventListener('click', () => sendAnswer($('draftAnswer')));
+$('editNote').addEventListener('click', () => {
+  $('textInput').value = baseText + qa.map(x => ' ' + x.a).join('');
+  qa = []; pendingQuestion = ''; leaveAsk(); $('textInput').focus();
 });
 
 function selectHtml(key, i, options, current, allowBlank){
@@ -771,6 +849,7 @@ function resetForm(){
   selectedProp = null; $('propChips').querySelectorAll('button').forEach(b => b.classList.remove('active'));
   $('codeWarn').classList.remove('show');
   currentDraft = null; $('draftCard').hidden = true; $('captureCard').hidden = false;
+  baseText = ''; qa = []; pendingQuestion = ''; leaveAsk(); $('draftAsk').hidden = true;
   $('statusLine').textContent = ''; $('draftConfirm').disabled = false;
 }
 
@@ -962,7 +1041,10 @@ const demo = {
   async config(){ await wait(150); return { ok: true, properties: DEFAULT_PROPS, options: { log: {}, inventory: {} } }; },
   async draft(p){
     await wait(700);
-    const lines = (p.text || '').split(/\n|;|\band also\b/i).map(s => s.trim()).filter(Boolean);
+    const base = (p.text || '').split(/\n\nQ:/)[0].trim();
+    const answers = [...(p.text || '').matchAll(/^A: (.*)$/gm)].map(m => m[1]).join(' ');
+    if (!answers && !p.photoBase64 && base.split(/\s+/).length < 4) return { blocked: true, asking: true, reason: 'Which property is that at, and is something broken or do you just need it?' };
+    const lines = (base + (answers ? ' — ' + answers : '')).split(/\n|;|\band also\b/i).map(s => s.trim()).filter(Boolean);
     const items = lines.map(l => {
       const safety = /short|electrical|gas|leak|egress|handrail|lock.*(jam|stuck)|can'?t get (in|out)/i.test(l);
       return {
