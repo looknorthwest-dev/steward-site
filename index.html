@@ -377,7 +377,7 @@ const CONFIG = {
 };
 const DEMO_MODE = !CONFIG.ENDPOINT_URL;
 
-const DEFAULT_PROPS = ['Seal Rock','Lebanon rentals','Morton','Mary St','Nelson','Sodaville','Hobbs','Santiam Hwy','6th st'];
+const DEFAULT_PROPS = ['Seal Rock','Lebanon','Morton','Mary St','Nelson','Sodaville','Hobbs','Santiam Hwy','6th st'];
 const PRIORITIES = ['1 Now','2 Soon','3 Eventually'];
 const HANDLED = ['In-House','Hire Out','Undecided'];
 const DEFAULT_ASSIGNEES = ['Abe','Donica','Shane','Unassigned'];
@@ -997,7 +997,7 @@ const demo = {
     await wait(700);
     if (/lock/i.test(p.text)) return {
       ok: true, headline: 'Hold off — 6 door lock handles are on the shelf at Lebanon, and 2 locks are already ordered.',
-      onOrder: ['2 door locks, Lebanon rentals — marked Ordered'],
+      onOrder: ['2 door locks, Lebanon — marked Ordered'],
       matches: [{ id: 'I3', item: 'Door lock handles', qty: '6', storedAt: 'Lebanon', tier: 'substitute',
         why: 'Same kind of item, but the sheet does not say which function they are or whether they are keyed alike.',
         verify: 'Passage vs. entry, backset, and keyed alike?', distanceNote: '' }]
