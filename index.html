@@ -69,11 +69,7 @@
   .pill.green{background:color-mix(in srgb,var(--green) 16%,transparent);color:var(--green);}
   .pill.blue{background:color-mix(in srgb,var(--blue) 16%,transparent);color:var(--blue);}
   .pill.grey{background:var(--line);color:var(--muted);}
-  #viewProp.has-red, #viewProp option.has-red{background-color:color-mix(in srgb,var(--red) 22%,var(--card));color:var(--red);font-weight:600;}
-  #redProps{margin-bottom:12px;align-items:center;}
-  #redProps .lbl2{font-size:12px;font-weight:600;color:var(--red);}
-  #redProps button{background:color-mix(in srgb,var(--red) 16%,transparent);border-color:var(--red);color:var(--red);font-weight:600;}
-  #redProps button.active{background:var(--red);color:var(--card);}
+  #viewProp.has-red, #viewProp option.has-red{color:var(--red);font-weight:600;}
 
   /* draft cards */
   .draft h2{font-size:15px;margin:0 0 4px;}
@@ -240,7 +236,6 @@
   <!-- ============ OPEN ============ -->
   <section id="tab-open" class="panel" hidden>
     <div class="card">
-      <div class="chips" id="redProps" hidden></div>
       <div class="chips" id="viewChips"></div>
       <div class="toolbar">
         <select id="viewProp"></select>
@@ -677,25 +672,18 @@ async function loadViews(){
 
 function sameProp(a, b){ return !b || String(a).toLowerCase().indexOf(b.toLowerCase().split(' ')[0]) === 0 || String(a).toLowerCase() === b.toLowerCase(); }
 
-// Properties with an open red task are highlighted red in the Lists dropdown and listed as chips above it.
-// (iOS ignores option colours, so the chips and the highlighted dropdown itself carry it there.)
+// Properties with an open red task get a red dot and red text in the Lists dropdown.
+// (iOS ignores option colours, so the dot carries it there.)
 function markRedProps(){
-  const sel = $('viewProp'), bar = $('redProps'), reds = [];
+  const sel = $('viewProp');
   [...sel.options].forEach(o => {
     if (!o.value) return;
-    const n = viewData ? viewData.tasks.filter(t => prioRank(t.priority) === 1 && sameProp(t.property, o.value)).length : 0;
-    o.classList.toggle('has-red', n > 0);
-    if (n) reds.push({ name: o.value, n });
+    const red = !!viewData && viewData.tasks.some(t => prioRank(t.priority) === 1 && sameProp(t.property, o.value));
+    o.classList.toggle('has-red', red);
+    o.textContent = (red ? '🔴 ' : '') + o.value;
   });
   const cur = sel.options[sel.selectedIndex];
   sel.classList.toggle('has-red', !!cur && cur.classList.contains('has-red'));
-  bar.hidden = !reds.length;
-  bar.innerHTML = reds.length ? '<span class="lbl2">Red now:</span>' + reds.map(r =>
-    `<button type="button" data-prop="${escapeHtml(r.name)}"${sel.value === r.name && viewFilter === 'red' ? ' class="active"' : ''}>${escapeHtml(r.name)} · ${r.n}</button>`).join('') : '';
-  bar.querySelectorAll('button').forEach(b => b.addEventListener('click', () => {
-    const on = b.classList.contains('active');
-    viewFilter = 'red'; sel.value = on ? '' : b.dataset.prop; renderViews();
-  }));
 }
 
 function renderViews(){
