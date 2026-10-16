@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Privacy · Property Steward</title>
+<link rel="icon" type="image/svg+xml" href="favicon.svg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;600&family=Marcellus&display=swap">
+<style>
+  :root{
+    --bg:#edf0ee; --card:#ffffff; --ink:#1e2226; --muted:#5f686d; --line:#dce2df; --water:#2c6970;
+    --koa:#9b5a2c; --bamboo:#e8d5a9; --mahogany:#5a2418;
+  }
+  @media (prefers-color-scheme: dark){
+    :root{ --bg:#121518; --card:#1a1e21; --ink:#ebe8e1; --muted:#9ba3a7; --line:#2a3034; --water:#7bbabf; }
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.6 "Figtree",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+    -webkit-font-smoothing:antialiased;padding:40px 16px 56px;}
+  main{max-width:640px;margin:0 auto;background:var(--card);border:1px solid var(--line);border-radius:20px;padding:32px 24px;}
+  h1{font-family:"Marcellus",Georgia,serif;font-weight:400;font-size:30px;line-height:1.15;margin:0;}
+  .inlay{height:7px;margin:14px 0 6px;
+    background:linear-gradient(90deg,rgba(255,255,255,0) 10%,rgba(255,255,255,.22) 50%,rgba(255,255,255,0) 90%),
+      linear-gradient(to bottom,var(--mahogany) 0 1px,var(--bamboo) 1px 2px,var(--koa) 2px 5px,var(--bamboo) 5px 6px,var(--mahogany) 6px 7px);
+    clip-path:polygon(0 50%,8px 0,calc(100% - 8px) 0,100% 50%,calc(100% - 8px) 100%,8px 100%);}
+  h2{font-family:"Marcellus",Georgia,serif;font-weight:400;font-size:21px;margin:30px 0 6px;}
+  p,li{max-width:66ch;}
+  ul{padding-left:20px;}
+  .updated{color:var(--muted);font-size:14px;margin:0;}
+  a{color:var(--water);text-underline-offset:3px;}
+</style>
+</head>
+<body>
+<main>
+  <h1>Privacy</h1>
+  <div class="inlay" aria-hidden="true"></div>
+  <p class="updated">Property Steward · updated 16 October 2026</p>
+
+  <p>Property Steward is a private tool for keeping track of maintenance, supplies and questions about a small group of
+  properties. Only three people can use it, and nobody else can sign in.</p>
+
+  <h2>Signing in with Google</h2>
+  <p>When you sign in, Google tells Steward your name, email address and profile picture. Steward uses only your email
+  address, to check that you are one of the people allowed in. It does not see or use your Gmail, Drive, contacts,
+  calendar or anything else in your Google account.</p>
+  <p>After that check, Steward gives your device its own sign-in token so you stay signed in for 30 days. The token holds
+  your email address and an expiry date, and lives only in your browser. <b>Sign out</b>, at the bottom of the app, removes it.</p>
+
+  <h2>What you enter</h2>
+  <ul>
+    <li>Notes, photos and questions you type into Steward are sent to Claude, an AI model made by Anthropic, so it can draft
+    entries and answer questions. Door codes, combinations and passwords are removed from the text first.</li>
+    <li>Entries are saved to the property log, a Google Sheet, only when you press <b>Save</b>. A saved entry may note who
+    added it.</li>
+  </ul>
+
+  <h2>What Steward doesn't do</h2>
+  <p>No ads, no analytics or tracking, and nothing is sold or shared with anyone else. Fonts are loaded from Google Fonts.</p>
+
+  <h2>Questions</h2>
+  <p>Email <a href="mailto:looknorthwest@gmail.com">looknorthwest@gmail.com</a>.</p>
+</main>
+</body>
+</html>
