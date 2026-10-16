@@ -9,6 +9,7 @@
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <meta name="theme-color" content="#edf0ee" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#121518" media="(prefers-color-scheme: dark)">
+<script src="https://accounts.google.com/gsi/client" async></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&family=Marcellus&display=swap">
@@ -199,6 +200,25 @@
     box-shadow:0 12px 30px -12px rgba(0,0,0,.45);
     transform:translateY(12px);transition:opacity .25s ease, transform .25s ease;max-width:520px;margin:0 auto;z-index:6;}
   .toast.show{opacity:1;transform:translateY(0);}
+  /* sign-in */
+  .signin{position:fixed;inset:0;z-index:20;background:var(--bg);display:flex;align-items:center;justify-content:center;
+    padding:24px 16px calc(24px + env(safe-area-inset-bottom));overflow:auto;}
+  .signin-box{width:100%;max-width:400px;background:var(--card);border:1px solid var(--line);border-radius:20px;
+    padding:32px 24px 24px;box-shadow:var(--shadow);text-align:center;}
+  .signin-box .inlay{margin:14px auto 0;}
+  .signin-box p{color:var(--muted);margin:20px 0 22px;}
+  .gsi{display:flex;justify-content:center;min-height:44px;}
+  .signin-msg{font-size:13.5px;color:var(--muted);margin-top:14px;}
+  .signin-msg:empty{display:none;}
+  .signin-msg.err{color:var(--danger-ink);}
+  #passForm{margin-top:14px;text-align:left;}
+  #passForm input{width:100%;border:1px solid var(--line-strong);border-radius:12px;padding:11px 14px;font-size:16px;background:var(--field-bg);}
+  #passForm input:focus{outline:none;border-color:var(--water);box-shadow:0 0 0 3px color-mix(in srgb,var(--water) 20%,transparent);}
+  #passForm .btn{margin-top:12px;}
+  .linkbtn{background:none;border:none;padding:4px;color:var(--water);font-size:13.5px;
+    text-decoration:underline;text-decoration-thickness:1px;text-underline-offset:3px;}
+  .signin .linkbtn{margin-top:18px;}
+  .foot{max-width:520px;margin:28px auto 0;padding:0 16px;text-align:center;color:var(--muted);font-size:13px;}
   @media (prefers-reduced-motion: reduce){
     *,*::before,*::after{animation:none!important;transition:none!important;}
   }
@@ -319,6 +339,26 @@
   <button data-tab="open"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9.5 7h10M9.5 12h10M9.5 17h10"/><path d="M5 7h.01M5 12h.01M5 17h.01" stroke-width="2.4"/></svg>Lists</button>
 </nav>
 
+<footer class="foot" id="foot" hidden>
+  <span id="whoSigned"></span>
+  <button type="button" class="linkbtn" id="signOut">Sign out</button>
+</footer>
+
+<div class="signin" id="signin" hidden>
+  <div class="signin-box">
+    <h1>Property Steward</h1>
+    <div class="inlay" aria-hidden="true"></div>
+    <p>Sign in with your Google account to open the Steward.</p>
+    <div class="gsi" id="gsiButton"></div>
+    <div class="signin-msg" id="signinMsg" role="alert"></div>
+    <button type="button" class="linkbtn" id="usePass">Use the passphrase instead</button>
+    <form id="passForm" hidden>
+      <input type="password" id="passInput" placeholder="Passphrase" autocomplete="current-password" aria-label="Passphrase">
+      <button class="btn" type="submit">Open the Steward</button>
+    </form>
+  </div>
+</div>
+
 <div class="toast" id="toast" role="status"></div>
 
 <script>
@@ -327,8 +367,9 @@ const CONFIG = {
   // Paste your deployed Apps Script Web App URL, e.g. "https://script.google.com/macros/s/AKfycb.../exec"
   // The Anthropic API key does NOT go here — it lives in the Apps Script's Script Properties.
   ENDPOINT_URL: "https://script.google.com/macros/s/AKfycbwmAjcnLHTJdNbKTXnsIYWnALbwhO1x0S8Uxi3TWOJsdM7rBg7uFlhjjb2t1vX2Zd8/exec",
-  // The passphrase is NOT in this file (the site is public). Each device is asked for it once and
-  // keeps it in localStorage. It must match APP_SHARED_SECRET in the Script Properties.
+  // Sign-in is with Google. This OAuth client ID is public by design; it must match GOOGLE_CLIENT_ID in code.gs.
+  // The fallback passphrase is NOT in this file (the site is public); it must match APP_SHARED_SECRET in the Script Properties.
+  GOOGLE_CLIENT_ID: "383522385552-cqaknjqijk0kre6d8vcg7l9donp9vecg.apps.googleusercontent.com",
 };
 const DEMO_MODE = !CONFIG.ENDPOINT_URL;
 
@@ -370,30 +411,111 @@ async function copyText(text){
   catch(e){ showToast("Couldn't copy — select the text and copy it by hand."); }
 }
 
-function getPassphrase(ask){
-  let p = store('steward.pass');
-  if (!p && ask) {
-    p = (window.prompt('Enter the Steward passphrase:') || '').trim();
-    if (p) store('steward.pass', p);
-  }
-  return p || '';
-}
-async function api(action, extra, retried){
-  const payload = Object.assign({ action, secret: DEMO_MODE ? '' : getPassphrase(true) }, extra || {});
-  if (DEMO_MODE) return demo[action](payload);
+async function post(payload){
   const res = await fetch(CONFIG.ENDPOINT_URL, {
     method: 'POST',
     headers: {'Content-Type': 'text/plain;charset=utf-8'}, // avoids an Apps Script CORS preflight
     body: JSON.stringify(payload)
   });
   if (!res.ok) throw new Error('bad response');
-  const out = await res.json();
+  return res.json();
+}
+// Every call carries the session token from Google sign-in (or, as a fallback, the passphrase).
+// If there is neither, or the server turns them down, the sign-in screen opens and the call
+// carries on once someone has signed in.
+async function api(action, extra){
+  if (DEMO_MODE) return demo[action](Object.assign({ action }, extra || {}));
+  if (!session() && !passphrase()) await needSignIn();
+  const out = await post(Object.assign({ action, session: session(), secret: session() ? '' : passphrase() }, extra || {}));
+  if (out && out.session) store('steward.session', out.session); // renewed
   if (out && out.unauthorized) {
-    try { localStorage.removeItem('steward.pass'); } catch(e){}
-    if (!retried && payload.secret) { showToast('Wrong passphrase — try again.'); return api(action, extra, true); }
+    const usedPass = !session() && passphrase();
+    clearAuth();
+    await needSignIn(usedPass ? "That passphrase didn't work." : 'Your sign-in ran out. Sign in again to carry on.');
+    return api(action, extra);
   }
   return out;
 }
+
+/* ---------- sign-in ---------- */
+function session(){ return store('steward.session') || ''; }
+function passphrase(){ return store('steward.passphrase') || ''; }
+function clearAuth(){
+  ['steward.session', 'steward.passphrase', 'steward.email'].forEach(k => { try { localStorage.removeItem(k); } catch(e){} });
+}
+try { localStorage.removeItem('steward.pass'); } catch(e){} // the old passphrase-only sign-in; Google replaces it
+
+let signinWaiters = [];
+function needSignIn(msg){
+  if ($('signin').hidden) { signinMessage(msg || '', true); $('signin').hidden = false; $('foot').hidden = true; renderGoogleButton(); }
+  else if (msg) signinMessage(msg, true); // a second call waiting on the same sign-in keeps the first message
+  return new Promise(resolve => signinWaiters.push(resolve));
+}
+function signinMessage(text, isError){
+  $('signinMsg').textContent = text;
+  $('signinMsg').classList.toggle('err', !!isError);
+}
+function finishSignIn(){
+  $('signin').hidden = true; signinMessage('');
+  $('passForm').hidden = true; $('usePass').hidden = false; $('passInput').value = '';
+  showSignedIn();
+  const waiting = signinWaiters; signinWaiters = [];
+  waiting.forEach(resolve => resolve());
+}
+function showSignedIn(){
+  if (DEMO_MODE) return;
+  $('whoSigned').textContent = store('steward.email') ? 'Signed in as ' + store('steward.email') : 'Signed in with the passphrase';
+  $('foot').hidden = false;
+}
+
+// Google's sign-in script loads on its own; wait for it, but not forever.
+let gsiInit = false, gsiTries = 0;
+function renderGoogleButton(){
+  const id = window.google && google.accounts && google.accounts.id;
+  if (!id) {
+    if (++gsiTries === 50) signinMessage("Google sign-in didn't load. Check your connection, or use the passphrase.", true);
+    if (gsiTries < 300) setTimeout(renderGoogleButton, 200);
+    return;
+  }
+  if (!gsiInit) {
+    id.initialize({ client_id: CONFIG.GOOGLE_CLIENT_ID, callback: onGoogleCredential, auto_select: true });
+    gsiInit = true;
+  }
+  const dark = window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches;
+  id.renderButton($('gsiButton'), { theme: dark ? 'filled_black' : 'outline', size: 'large', shape: 'pill', text: 'signin_with', width: 280 });
+  id.prompt();
+}
+async function onGoogleCredential(resp){
+  signinMessage('Signing in…');
+  try {
+    const r = await post({ action: 'signin', idToken: resp.credential });
+    if (r.ok) {
+      store('steward.session', r.session); store('steward.email', r.email);
+      try { localStorage.removeItem('steward.passphrase'); } catch(e){}
+      setWho(r.name);
+      finishSignIn();
+    } else {
+      if (r.notAllowed) google.accounts.id.disableAutoSelect();
+      signinMessage(r.reason || "Couldn't sign in. Try again.", true);
+    }
+  } catch (e) {
+    signinMessage("Couldn't reach the Steward. Check your connection and try again.", true);
+  }
+}
+$('usePass').addEventListener('click', () => { $('usePass').hidden = true; $('passForm').hidden = false; $('passInput').focus(); });
+$('passForm').addEventListener('submit', e => {
+  e.preventDefault();
+  const p = $('passInput').value.trim();
+  if (!p) return;
+  store('steward.passphrase', p); finishSignIn();
+});
+$('signOut').addEventListener('click', () => {
+  clearAuth(); viewData = null;
+  if (window.google && google.accounts && google.accounts.id) google.accounts.id.disableAutoSelect();
+  needSignIn();
+});
+// Open on the sign-in screen rather than flashing the app first.
+if (!DEMO_MODE) { if (session() || passphrase()) showSignedIn(); else needSignIn(); }
 
 /* ---------- tabs ---------- */
 document.querySelectorAll('nav button').forEach(b => b.addEventListener('click', () => showTab(b.dataset.tab)));
@@ -405,14 +527,15 @@ function showTab(name){
 }
 
 /* ---------- who ---------- */
-const savedWho = store('steward.who');
-document.querySelectorAll('#who button').forEach(btn => {
-  if (btn.dataset.who === savedWho) { who = savedWho; btn.classList.add('active'); }
-  btn.addEventListener('click', () => {
-    who = btn.dataset.who; store('steward.who', who);
-    document.querySelectorAll('#who button').forEach(b => b.classList.toggle('active', b === btn));
-  });
-});
+// Signing in picks the signed-in person, but the buttons stay: Donica and Abe share a laptop.
+function setWho(name){
+  const btns = [...document.querySelectorAll('#who button')];
+  if (!btns.some(b => b.dataset.who === name)) return;
+  who = name; store('steward.who', who);
+  btns.forEach(b => b.classList.toggle('active', b.dataset.who === name));
+}
+document.querySelectorAll('#who button').forEach(btn => btn.addEventListener('click', () => setWho(btn.dataset.who)));
+if (store('steward.who')) setWho(store('steward.who'));
 
 /* ---------- config from the sheet ---------- */
 function fillPropertyUI(){
