@@ -106,13 +106,33 @@
   .warn{margin-top:12px;padding:11px 14px;border-radius:12px;background:var(--danger-bg);color:var(--danger-ink);font-size:13.5px;display:none;}
   .warn.show{display:block;}
   .note{margin-top:12px;padding:11px 14px;border-radius:12px;background:var(--note-bg);border:1px solid var(--note-line);color:var(--note-ink);font-size:13.5px;}
-  .said{padding:10px 14px;border-left:3px solid var(--koa);border-radius:0 12px 12px 0;background:var(--accent-soft);color:var(--muted);
-    font-size:14px;line-height:1.45;white-space:pre-wrap;display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;overflow:hidden;}
-  .said-k{font-size:12px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--muted);margin-bottom:6px;}
-  .askq{font-family:var(--serif);font-size:19px;line-height:1.3;margin:16px 0 10px;}
-  .askblock textarea,#draftAsk textarea{min-height:64px;}
   .linkbtn{display:block;margin:12px auto 0;padding:4px 8px;border:none;background:none;color:var(--muted);font-size:13.5px;text-decoration:underline;}
-  #draftAsk{margin-top:12px;}
+  /* Add tab conversation, directly under the note: the Steward on the left, you on the right. */
+  #composer.locked textarea, .ask-row.locked textarea{min-height:0;resize:none;background:transparent;border-color:var(--line);cursor:default;}
+  .ask-row.locked button{display:none;}
+  #composer.locked textarea:focus, .ask-row.locked textarea:focus{border-color:var(--line);box-shadow:none;}
+  .chat{margin-top:14px;}
+  .chat-log{display:flex;flex-direction:column;gap:8px;}
+  .msg{max-width:86%;padding:10px 14px;border-radius:16px;font-size:15px;line-height:1.45;white-space:pre-wrap;overflow-wrap:anywhere;
+    animation:settle .22s ease-out;}
+  .msg.steward{align-self:flex-start;background:var(--field-bg);border:1px solid var(--line);border-top-left-radius:5px;
+    font-family:var(--serif);font-size:16.5px;line-height:1.4;}
+  .msg.you{align-self:flex-end;background:var(--accent-soft);border:1px solid color-mix(in srgb,var(--accent) 28%,transparent);border-top-right-radius:5px;}
+  .msg.sys{font-family:var(--sans);font-size:13.5px;color:var(--muted);}
+  .msg.ctx{display:flex;gap:10px;align-items:center;padding:0;background:none;border:none;}
+  .msg.ctx img{display:block;width:64px;height:64px;object-fit:cover;border-radius:11px;}
+  .msg.typing{display:flex;gap:5px;align-items:center;padding:15px 16px;}
+  .msg.typing span{width:6px;height:6px;border-radius:50%;background:var(--koa);animation:dot 1.2s infinite ease-in-out;}
+  .msg.typing span:nth-child(2){animation-delay:.15s;} .msg.typing span:nth-child(3){animation-delay:.3s;}
+  @keyframes dot{0%,60%,100%{opacity:.3;transform:none;} 30%{opacity:1;transform:translateY(-2px);}}
+  .chat-reply{display:flex;gap:8px;margin-top:12px;}
+  .chat-reply input{flex:1;min-width:0;}
+  .chat-reply button{flex:none;width:48px;border:none;border-radius:12px;display:flex;align-items:center;justify-content:center;
+    background:linear-gradient(180deg,var(--accent-hi),var(--accent));color:var(--accent-ink);box-shadow:inset 0 1px 0 rgba(255,255,255,.16);}
+  .chat-reply button svg{width:20px;height:20px;}
+  .chat-reply :disabled{opacity:.5;}
+  #draftCard{scroll-margin-top:16px;}
+  @media(min-width:768px){ #draftCard{scroll-margin-top:84px;} }
   .status{text-align:center;color:var(--muted);font-size:13.5px;margin-top:12px;min-height:18px;}
   .pill{display:inline-block;padding:2px 9px;border-radius:999px;font-size:11.5px;font-weight:600;line-height:1.5;white-space:nowrap;}
   .pill.red{background:color-mix(in srgb,var(--red) 14%,transparent);color:var(--red);}
@@ -141,13 +161,13 @@
   .draftbtns button:disabled{opacity:.5;}
 
   /* ask */
-  .qa{margin-top:14px;}
-  .qa .q{font-size:13.5px;color:var(--muted);margin-bottom:8px;}
-  .qa .a{white-space:pre-wrap;font-size:15.5px;line-height:1.5;}
-  .qa .meta{margin-top:12px;display:flex;flex-wrap:wrap;gap:6px;align-items:center;}
-  .ask-row{display:flex;gap:8px;}
-  .ask-row input{flex:1;}
-  .ask-row button{padding:0 18px;border:none;border-radius:12px;background:linear-gradient(180deg,var(--accent-hi),var(--accent));
+  .msg.answer{max-width:92%;white-space:normal;font-family:var(--sans);font-size:15.5px;line-height:1.5;}
+  .msg.answer .a{white-space:pre-wrap;}
+  .msg.answer .note{margin-top:10px;}
+  .msg.answer .meta{margin-top:10px;display:flex;flex-wrap:wrap;gap:6px;align-items:center;}
+  .ask-row{display:flex;gap:8px;align-items:flex-end;}
+  .ask-row textarea{flex:1;min-height:0;resize:none;}
+  .ask-row button{height:46px;padding:0 18px;border:none;border-radius:12px;background:linear-gradient(180deg,var(--accent-hi),var(--accent));
     color:var(--accent-ink);font-weight:600;font-size:15px;box-shadow:inset 0 1px 0 rgba(255,255,255,.16);}
   .ask-row button:disabled{opacity:.5;}
 
@@ -173,7 +193,7 @@
   @media (hover:hover){
     .chips button:hover:not(.active):not(.prio), .photo-btn:hover, .row .done:hover{border-color:var(--accent);color:var(--accent);}
     .chips button.prio:hover:not(.active){border-color:var(--pc);}
-    .btn:hover:not(:disabled), .draftbtns .confirm:hover, .ask-row button:hover:not(:disabled){filter:brightness(1.06);}
+    .btn:hover:not(:disabled), .draftbtns .confirm:hover, .ask-row button:hover:not(:disabled), .chat-reply button:hover:not(:disabled){filter:brightness(1.06);}
     .seg button:hover:not(.active){color:var(--ink);}
   }
 
@@ -265,6 +285,16 @@
       <label class="lbl">What's going on</label>
       <textarea id="textInput" placeholder="e.g. Hot Mini lock jammed again — and the Morton toilet still bubbles. Or just drop a photo of a pile."></textarea>
 
+      <div id="chat" class="chat" hidden>
+        <div id="chatLog" class="chat-log" aria-live="polite"></div>
+        <div id="chatReply" class="chat-reply" hidden>
+          <input type="text" id="answerInput" placeholder="Reply" aria-label="Your reply" enterkeyhint="send" autocomplete="off">
+          <button type="button" id="answerBtn" aria-label="Send"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 19V5M6 11l6-6 6 6"/></svg></button>
+        </div>
+        <button type="button" class="linkbtn" id="editNote">Edit my note instead</button>
+      </div>
+
+      <div id="extras">
       <div class="photo-row">
         <label class="photo-btn" for="photoInput"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8.5A1.5 1.5 0 0 1 5.5 7h2.2l1.5-2h5.6l1.5 2h2.2A1.5 1.5 0 0 1 20 8.5v9a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 4 17.5z"/><circle cx="12" cy="13" r="3.5"/></svg><span id="photoLabel">Add a photo</span></label>
         <input type="file" id="photoInput" accept="image/*">
@@ -274,14 +304,6 @@
       <label class="lbl" style="margin-top:14px;">Property (optional — I'll work it out if you skip it)</label>
       <div class="chips" id="propChips"></div>
       </div>
-
-      <div id="askBlock" class="askblock" hidden>
-        <div class="said-k">You said</div>
-        <div class="said" id="saidText"></div>
-        <p class="askq" id="askQuestion"></p>
-        <textarea id="answerInput" placeholder="Your answer" aria-label="Your answer"></textarea>
-        <button class="btn" id="answerBtn">Send</button>
-        <button type="button" class="linkbtn" id="editNote">Edit my note instead</button>
       </div>
 
       <div id="codeWarn" class="warn">
@@ -305,10 +327,6 @@
       <h2 id="draftTitle">Here's what I've got</h2>
       <p class="hint">Fix anything that's off. Untick anything you don't want saved.</p>
       <div id="draftNotes"></div>
-      <div id="draftAsk" hidden>
-        <textarea id="draftAnswer" placeholder="Your answer" aria-label="Your answer"></textarea>
-        <div class="draftbtns"><button class="confirm" id="draftAnswerBtn">Answer and update</button></div>
-      </div>
       <div id="draftItems"></div>
       <div class="draftbtns">
         <button id="draftCancel">Discard</button>
@@ -320,15 +338,23 @@
   <!-- ============ ASK ============ -->
   <section id="tab-ask" class="panel" hidden>
     <div class="card">
-      <label class="lbl">Ask the Steward</label>
-      <div class="ask-row">
-        <input type="text" id="askInput" placeholder="When was the roof replaced?" enterkeyhint="send">
+      <label class="lbl" for="askInput">Ask the Steward</label>
+      <div class="ask-row" id="askFirst">
+        <textarea id="askInput" rows="1" placeholder="When was the roof replaced?" enterkeyhint="send"></textarea>
         <button id="askBtn">Ask</button>
       </div>
       <div class="chips" id="askChips" style="margin-top:12px;"></div>
+      <div id="askChat" class="chat" hidden>
+        <div id="askLog" class="chat-log" aria-live="polite"></div>
+        <div id="askReply" class="chat-reply" hidden>
+          <input type="text" id="askReplyInput" placeholder="Ask a follow-up" aria-label="Ask a follow-up" enterkeyhint="send" autocomplete="off">
+          <button type="button" id="askReplyBtn" aria-label="Send"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 19V5M6 11l6-6 6 6"/></svg></button>
+        </div>
+        <button type="button" class="linkbtn" id="askNew">Start a new question</button>
+      </div>
       <div id="askWarn" class="warn">Codes and passwords aren't kept here — ask Loren.</div>
+      <div class="status" id="askStatus"></div>
     </div>
-    <div id="askLog"></div>
   </section>
 
   <!-- ============ BUYING ============ -->
@@ -407,7 +433,8 @@ const DEFAULT_ASSIGNEES = ['Abe','Donica','Shane','Unassigned'];
 /* ---------- state ---------- */
 let who = null, selectedProp = null, photoData = null, currentDraft = null;
 let baseText = '', qa = [], pendingQuestion = '';  // the original note, plus any question/answer rounds so far
-const MAX_ROUNDS = 2;
+const MAX_ROUNDS = 3;
+let draftRun = 0, askRun = 0;  // bumped when a conversation is cleared, so a reply still in flight is dropped
 let props = DEFAULT_PROPS.slice();
 let opts = { log:{}, inventory:{} };
 let askHistory = [];
@@ -649,7 +676,7 @@ $('textInput').addEventListener('input', () => { $('askNudge').hidden = true; sk
 $('nudgeAsk').addEventListener('click', () => {
   const q = $('textInput').value.trim();
   $('textInput').value = ''; $('askNudge').hidden = true;
-  showTab('ask'); $('askInput').value = q; runAsk();
+  showTab('ask'); newAskConversation(); $('askInput').value = q; startAsk();
 });
 $('nudgeLog').addEventListener('click', () => { skipNudge = true; $('askNudge').hidden = true; $('sendBtn').click(); });
 
@@ -660,72 +687,127 @@ $('sendBtn').addEventListener('click', () => {
   if (!photoData && !skipNudge && /\?\s*$/.test(text)) { $('askNudge').hidden = false; return; }
   skipNudge = false;
   baseText = text; qa = []; pendingQuestion = '';
-  runDraft();
+  openChat(); runDraft();
 });
 
 function composedText(){
   return baseText + qa.map(x => `\n\nQ: ${x.q}\nA: ${x.a}`).join('');
 }
-// Say something where the person is looking: under the button on the Add card, or a toast on the draft card.
-function say(msg){ if (!$('captureCard').hidden) $('statusLine').textContent = msg; else showToast(msg); }
+// The note with any answers folded in, for handing it back to be edited.
+function foldedText(){ return baseText + qa.map(x => ' ' + x.a).join(''); }
 
-function showAsk(question){
-  pendingQuestion = question;
-  $('saidText').textContent = (baseText || 'Photo') + qa.map(x => ' ' + x.a).join('');
-  $('askQuestion').textContent = question;
-  $('answerInput').value = '';
-  $('composer').hidden = true; $('sendBtn').hidden = true; $('askBlock').hidden = false;
-  $('statusLine').textContent = '';
-  $('answerInput').focus();
+/* ---------- the conversation under the note ---------- */
+// Tapping Next locks the note and opens a thread right under it. The Steward's questions land there and
+// the reply box answers them; the draft card appears under the whole thing.
+function bubble(from, text, extra, log){
+  const d = document.createElement('div');
+  d.className = 'msg ' + from + (extra ? ' ' + extra : '');
+  d.textContent = text || '';
+  (log || $('chatLog')).append(d);
+  return d;
 }
-function leaveAsk(){
-  $('askBlock').hidden = true; $('composer').hidden = false; $('sendBtn').hidden = false;
+function typingBubble(log, label){
+  const d = bubble('steward', '', 'typing', log);
+  d.innerHTML = '<span></span><span></span><span></span>';
+  d.setAttribute('role', 'status'); d.setAttribute('aria-label', label);
+  d.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+  return d;
+}
+function openChat(){
+  const ta = $('textInput');
+  $('chatLog').innerHTML = '';
+  if (photoData || selectedProp) {
+    bubble('you', '', 'ctx').innerHTML =
+      (photoData ? `<img src="${escapeHtml(photoData.url)}" alt="Your photo">` : '') +
+      (selectedProp ? `<span class="pill grey">${escapeHtml(selectedProp)}</span>` : '');
+  }
+  ta.readOnly = true; $('composer').classList.add('locked');
+  ta.style.height = '0'; ta.style.height = (ta.scrollHeight + 2) + 'px';
+  $('extras').hidden = true; $('sendBtn').hidden = true; $('statusLine').textContent = '';
+  $('chatReply').hidden = true; $('chat').hidden = false;
+}
+function closeChat(){
+  $('chat').hidden = true; $('chatLog').innerHTML = ''; $('answerInput').value = '';
+  $('textInput').readOnly = false; $('textInput').style.height = ''; $('composer').classList.remove('locked');
+  $('extras').hidden = false; $('sendBtn').hidden = false;
+}
+function askInChat(question){
+  pendingQuestion = question;
+  bubble('steward', question);
+  $('chatReply').hidden = false;
+  $('answerInput').focus();
 }
 
 async function runDraft(){
-  const busy = [$('sendBtn'), $('answerBtn'), $('draftAnswerBtn')];
-  busy.forEach(b => b.disabled = true);
-  say(photoData ? 'Reading the photo…' : 'Reading it…');
+  $('answerInput').disabled = $('answerBtn').disabled = $('draftConfirm').disabled = true;
+  $('chatReply').hidden = true;
+  const typing = typingBubble($('chatLog'), photoData ? 'Reading the photo' : 'Reading it');
+  const run = draftRun;
   try {
     const draft = await api('draft', {
       text: composedText(), reporter: who, propertyHint: selectedProp,
       photoBase64: photoData && photoData.base64, photoMime: photoData && photoData.mime
     });
+    if (run !== draftRun) return;
+    typing.remove();
     if (draft.blocked) {
       const reason = draft.reason || "That couldn't be processed — try rephrasing.";
       const isQuestion = draft.asking || /\?\s*$/.test(reason);
-      if (isQuestion && qa.length < MAX_ROUNDS) { showAsk(reason); }
+      if (isQuestion && qa.length < MAX_ROUNDS) askInChat(reason);
       else if (isQuestion) {
-        // Two rounds and still not enough: hand the note back with the answers folded in.
-        $('textInput').value = baseText + ' ' + qa.map(x => x.a).join(' ');
-        leaveAsk(); $('captureCard').hidden = false; $('draftCard').hidden = true;
-        say("Still not enough for me to go on — add the missing detail to your note and try again.");
+        // Out of rounds and still not enough: hand the note back with the answers folded in.
+        $('textInput').value = foldedText(); resetConversation();
+        $('statusLine').textContent = "Still not enough for me to go on — add the missing detail to your note and tap Next again.";
       }
-      else { say(reason); }
+      else failed(reason);
     } else {
+      const n = draft.items.length;
+      draft._asked = !!(draft.question && qa.length < MAX_ROUNDS); // asked here, so not repeated on the draft card
       currentDraft = draft; renderDraft(draft);
-      $('draftAsk').hidden = !(draft.question && qa.length < MAX_ROUNDS);
-      $('draftAnswer').value = '';
-      pendingQuestion = draft.question || '';
-      leaveAsk(); $('captureCard').hidden = true; $('draftCard').hidden = false; $('statusLine').textContent = '';
+      $('draftCard').hidden = false;
+      bubble('steward', draft._asked ? "Here's a first go, below." : n === 1 ? "Here's what I've got — check it over below." : `I found ${n} things — check them over below.`);
+      if (draft._asked) askInChat(draft.question);
+      else { pendingQuestion = ''; $('draftCard').scrollIntoView({ behavior: 'smooth', block: 'start' }); }
     }
   } catch (err) {
-    say("Couldn't reach the Steward — check your connection and try again.");
+    if (run !== draftRun) return;
+    typing.remove();
+    failed("Couldn't reach the Steward — check your connection and try again.");
   }
-  busy.forEach(b => b.disabled = false);
+  $('answerInput').disabled = $('answerBtn').disabled = $('draftConfirm').disabled = false;
+}
+// On the first try, unlock the note and say why under it. Mid-conversation, put the reply back in the box to resend.
+function failed(msg){
+  if (!qa.length) { closeChat(); $('statusLine').textContent = msg; return; }
+  const last = qa.pop();
+  const mine = [...$('chatLog').querySelectorAll('.msg.you:not(.ctx)')].pop();
+  if (mine) mine.remove();
+  bubble('steward', msg, 'sys');
+  pendingQuestion = last.q; $('answerInput').value = last.a;
+  $('chatReply').hidden = false;
 }
 
-function sendAnswer(input){
-  const a = input.value.trim();
-  if (!a) { say('Type your answer first.'); return; }
+function sendAnswer(){
+  const a = $('answerInput').value.trim();
+  if (!a) { $('answerInput').focus(); return; }
   qa.push({ q: pendingQuestion, a });
+  bubble('you', a);
+  $('answerInput').value = '';
   runDraft();
 }
-$('answerBtn').addEventListener('click', () => sendAnswer($('answerInput')));
-$('draftAnswerBtn').addEventListener('click', () => sendAnswer($('draftAnswer')));
+$('answerBtn').addEventListener('click', sendAnswer);
+$('answerInput').addEventListener('keydown', e => { if (e.key === 'Enter' && !e.isComposing) { e.preventDefault(); sendAnswer(); } });
+$('answerInput').addEventListener('input', () => $('codeWarn').classList.toggle('show', looksLikeCredential($('answerInput').value)));
+
+// Back to an editable note (photo and property kept); any draft so far is dropped.
+function resetConversation(){
+  draftRun++;
+  $('answerInput').disabled = $('answerBtn').disabled = $('draftConfirm').disabled = false;
+  qa = []; pendingQuestion = ''; currentDraft = null;
+  $('draftCard').hidden = true; closeChat();
+}
 $('editNote').addEventListener('click', () => {
-  $('textInput').value = baseText + qa.map(x => ' ' + x.a).join('');
-  qa = []; pendingQuestion = ''; leaveAsk(); $('textInput').focus();
+  $('textInput').value = foldedText(); resetConversation(); $('textInput').focus();
 });
 
 function selectHtml(key, i, options, current, allowBlank){
@@ -745,7 +827,7 @@ function fld(label, html){ return `<div class="field"><div class="k">${label}</d
 function renderDraft(d){
   const notes = [];
   if (d.notice) notes.push(`<div class="warn show">${escapeHtml(d.notice)}</div>`);
-  if (d.question) notes.push(`<div class="note">${escapeHtml(d.question)}</div>`);
+  if (d.question && !d._asked) notes.push(`<div class="note">${escapeHtml(d.question)}</div>`);
   $('draftNotes').innerHTML = notes.join('');
   const n = d.items.length;
   $('draftTitle').textContent = n === 1 ? "Here's what I've got" : `I found ${n} things`;
@@ -848,8 +930,7 @@ function resetForm(){
   $('photoLabel').textContent = 'Add a photo';
   selectedProp = null; $('propChips').querySelectorAll('button').forEach(b => b.classList.remove('active'));
   $('codeWarn').classList.remove('show');
-  currentDraft = null; $('draftCard').hidden = true; $('captureCard').hidden = false;
-  baseText = ''; qa = []; pendingQuestion = ''; leaveAsk(); $('draftAsk').hidden = true;
+  baseText = ''; resetConversation();
   $('statusLine').textContent = ''; $('draftConfirm').disabled = false;
 }
 
@@ -857,36 +938,82 @@ function resetForm(){
 
 const ASK_SUGGESTIONS = ["What's red right now?", "What's waiting on a pro?", "Who services the HVAC?", "What do we have on the shelf?"];
 $('askChips').innerHTML = ASK_SUGGESTIONS.map(s => `<button type="button">${escapeHtml(s)}</button>`).join('');
-$('askChips').querySelectorAll('button').forEach(b => b.addEventListener('click', () => { $('askInput').value = b.textContent; runAsk(); }));
-$('askBtn').addEventListener('click', runAsk);
-$('askInput').addEventListener('keydown', e => { if (e.key === 'Enter') runAsk(); });
-$('askInput').addEventListener('input', () => $('askWarn').classList.toggle('show', looksLikeCredential($('askInput').value)));
+$('askChips').querySelectorAll('button').forEach(b => b.addEventListener('click', () => { $('askInput').value = b.textContent; startAsk(); }));
+$('askBtn').addEventListener('click', startAsk);
+$('askInput').addEventListener('keydown', e => { if (e.key === 'Enter' && !e.isComposing) { e.preventDefault(); startAsk(); } });
+$('askInput').addEventListener('input', () => { fitAskInput(); askCodeWarn($('askInput')); });
+$('askReplyBtn').addEventListener('click', sendAskReply);
+$('askReplyInput').addEventListener('keydown', e => { if (e.key === 'Enter' && !e.isComposing) { e.preventDefault(); sendAskReply(); } });
+$('askReplyInput').addEventListener('input', () => askCodeWarn($('askReplyInput')));
+$('askNew').addEventListener('click', () => { newAskConversation(); $('askInput').focus(); });
+function askCodeWarn(el){ $('askWarn').classList.toggle('show', looksLikeCredential(el.value)); }
 
-async function runAsk(){
+// Like the Add tab: the first question locks in the box at the top and the conversation opens right under it.
+// Follow-ups go in the reply box at the bottom of the thread; "Start a new question" clears it.
+function fitAskInput(){ const el = $('askInput'); if (!el.value) { el.style.height = ''; return; } el.style.height = '0'; el.style.height = (el.scrollHeight + 2) + 'px'; }
+function openAskChat(){
+  $('askInput').readOnly = true; $('askFirst').classList.add('locked'); fitAskInput();
+  $('askChips').hidden = true; $('askStatus').textContent = '';
+  $('askLog').innerHTML = ''; $('askReply').hidden = true; $('askChat').hidden = false;
+}
+function closeAskChat(){
+  askRun++; $('askReplyInput').disabled = $('askReplyBtn').disabled = false;
+  $('askChat').hidden = true; $('askLog').innerHTML = ''; askHistory = [];
+  $('askInput').readOnly = false; $('askFirst').classList.remove('locked'); $('askChips').hidden = false;
+}
+function newAskConversation(){
+  closeAskChat(); $('askInput').value = ''; fitAskInput(); $('askReplyInput').value = '';
+  $('askStatus').textContent = ''; $('askWarn').classList.remove('show');
+}
+
+function startAsk(){
+  if ($('askInput').readOnly) return;
   const q = $('askInput').value.trim();
   if (!q) return;
-  $('askBtn').disabled = true;
-  const card = document.createElement('div');
-  card.className = 'card qa';
-  card.innerHTML = `<div class="q">${escapeHtml(q)}</div><div class="a" style="color:var(--muted)">Looking…</div>`;
-  $('askLog').prepend(card);
+  askHistory = []; openAskChat(); runAsk(q, true);
+}
+function sendAskReply(){
+  const q = $('askReplyInput').value.trim();
+  if (!q) { $('askReplyInput').focus(); return; }
+  bubble('you', q, '', $('askLog'));
+  $('askReplyInput').value = '';
+  runAsk(q, false);
+}
+
+async function runAsk(q, first){
+  $('askReplyInput').disabled = $('askReplyBtn').disabled = true;
+  $('askReply').hidden = true;
+  const typing = typingBubble($('askLog'), 'Looking');
+  const run = askRun;
   try {
     const r = await api('ask', { question: q, history: askHistory });
+    if (run !== askRun) return;
+    typing.remove();
     if (r.ok) {
       const kc = { documented:'green', 'from memory':'yellow', 'not recorded':'grey', mixed:'blue' }[r.known] || 'grey';
-      card.innerHTML = `<div class="q">${escapeHtml(q)}</div><div class="a">${escapeHtml(r.answer)}</div>
-        ${r.dataNotes ? `<div class="note"><b>Heads up:</b> ${escapeHtml(r.dataNotes)}</div>` : ''}
-        <div class="meta"><span class="pill ${kc}">${escapeHtml(r.known)}</span>
-        ${(r.sources || []).map(s => `<span class="pill grey" title="${escapeHtml(s.tab)}">${escapeHtml(s.label)}</span>`).join('')}</div>`;
+      const b = bubble('steward', '', 'answer', $('askLog'));
+      b.innerHTML = `<div class="a">${escapeHtml(r.answer)}</div>` +
+        (r.dataNotes ? `<div class="note"><b>Heads up:</b> ${escapeHtml(r.dataNotes)}</div>` : '') +
+        `<div class="meta"><span class="pill ${kc}">${escapeHtml(r.known)}</span>` +
+        (r.sources || []).map(s => `<span class="pill grey" title="${escapeHtml(s.tab)}">${escapeHtml(s.label)}</span>`).join('') + '</div>';
       askHistory.push({ q, a: r.answer }); askHistory = askHistory.slice(-4);
-      $('askInput').value = '';
-    } else {
-      card.innerHTML = `<div class="q">${escapeHtml(q)}</div><div class="a">${escapeHtml(r.reason || "Couldn't answer that.")}</div>`;
-    }
+      $('askReply').hidden = false;
+      b.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+    } else askFailed(r.reason || "Couldn't answer that.", q, first);
   } catch (e) {
-    card.innerHTML = `<div class="q">${escapeHtml(q)}</div><div class="a">Couldn't reach the Steward — try again.</div>`;
+    if (run !== askRun) return;
+    typing.remove();
+    askFailed("Couldn't reach the Steward — try again.", q, first);
   }
-  $('askBtn').disabled = false;
+  $('askReplyInput').disabled = $('askReplyBtn').disabled = false;
+}
+// A first question that fails unlocks the box and says why under it; a follow-up goes back in the reply box.
+function askFailed(msg, q, first){
+  if (first) { closeAskChat(); $('askStatus').textContent = msg; return; }
+  const mine = [...$('askLog').querySelectorAll('.msg.you')].pop();
+  if (mine) mine.remove();
+  bubble('steward', msg, 'sys', $('askLog'));
+  $('askReplyInput').value = q; $('askReply').hidden = false;
 }
 
 /* ============================== BUYING ============================== */
