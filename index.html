@@ -619,15 +619,17 @@ function colorPropChips(){
 }
 fillPropertyUI();
 // Deferred so the demo stand-ins (defined at the bottom of this script) exist first.
-window.addEventListener('DOMContentLoaded', () => {
-  api('config').then(c => {
+function loadConfig(){
+  return api('config').then(c => {
     if (c && c.ok) {
       if (c.properties && c.properties.length) props = c.properties;
       opts = c.options || opts;
       fillPropertyUI();
     }
-  }).catch(() => { /* fall back to the built-in list */ })
-    .then(loadViews); // open tasks, for the property colours on the Add tab
+  }).catch(() => { /* fall back to the built-in list */ });
+}
+window.addEventListener('DOMContentLoaded', () => {
+  loadConfig().then(loadViews); // open tasks, for the property colours on the Add tab
 });
 
 /* ============================== ADD ============================== */
@@ -840,6 +842,20 @@ function renderDraft(d){
   $('draftItems').querySelectorAll('select[data-key="recordType"]').forEach(sel => sel.addEventListener('change', () => {
     syncDraftFromDom(); renderDraft(currentDraft);
   }));
+  $('draftItems').querySelectorAll('select[data-key="property"]').forEach(sel => sel.addEventListener('change', () => {
+    const inp = sel.parentElement.querySelector('input[data-key="newProperty"]');
+    inp.hidden = sel.value !== '__new';
+    if (!inp.hidden) inp.focus();
+  }));
+}
+
+// Property picker: the sheet's list, plus "+ New property…" which reveals a name box.
+function propHtml(it, i){
+  const isNew = !!it.addProperty || (!it.property && !!it.newProperty);
+  return `<select data-key="property" data-i="${i}"><option value="">— pick one —</option>` +
+    props.map(o => `<option value="${escapeHtml(o)}" ${!isNew && o === it.property ? 'selected' : ''}>${escapeHtml(o)}</option>`).join('') +
+    `<option value="__new" ${isNew ? 'selected' : ''}>+ New property…</option></select>` +
+    `<input type="text" data-key="newProperty" data-i="${i}" placeholder="New property name" value="${escapeHtml(it.newProperty || '')}" style="margin-top:6px" ${isNew ? '' : 'hidden'}>`;
 }
 
 function renderItem(it, i){
@@ -851,8 +867,9 @@ function renderItem(it, i){
 
   const common =
     fld('Type', selectHtml('recordType', i, ['task','inventory'], it.recordType)) +
-    fld('Property' + (it.propertyConfidence === 'guessed' ? ' <span class="pill yellow">guessed</span>' : ''),
-        selectHtml('property', i, props, it.property, true)) +
+    fld('Property' + (it.propertyConfidence === 'guessed' ? ' <span class="pill yellow">guessed</span>' : '') +
+        (!it.property && it.newProperty ? ' <span class="pill blue">not on your list</span>' : ''),
+        propHtml(it, i)) +
     fld('Category', catList.length ? selectHtml('category', i, catList, it.category, true) : inputHtml('category', i, it.category)) +
     fld('Item', inputHtml('item', i, it.item));
 
@@ -897,6 +914,11 @@ function syncDraftFromDom(){
   $('draftItems').querySelectorAll('.item').forEach(card => {
     currentDraft.items[Number(card.dataset.i)]._skip = !card.querySelector('.inc').checked;
   });
+  // "+ New property…" → the typed name becomes the property, flagged for the server to add on save.
+  currentDraft.items.forEach(it => {
+    if (it.property === '__new') { it.addProperty = true; it.property = (it.newProperty || '').trim(); }
+    else it.addProperty = false;
+  });
 }
 
 $('draftCancel').addEventListener('click', resetForm);
@@ -907,6 +929,9 @@ $('draftConfirm').addEventListener('click', async () => {
     if (card.querySelector('.inc').checked) chosen.push(currentDraft.items[Number(card.dataset.i)]);
   });
   if (!chosen.length) { showToast('Nothing ticked — discard it instead.'); return; }
+  const bad = chosen.find(c => (c.addProperty && !c.property) || (!c.property && c.recordType !== 'inventory'));
+  if (bad) { showToast(bad.addProperty ? 'Type the new property name, or pick one from the list.' : `Pick a property for "${bad.item || 'that item'}".`); return; }
+  const addedProp = chosen.some(c => c.addProperty);
   const btn = $('draftConfirm'), label = btn.textContent;
   btn.disabled = true; btn.textContent = 'Saving…';
   try {
@@ -914,6 +939,7 @@ $('draftConfirm').addEventListener('click', async () => {
     if (result.ok) {
       showToast(DEMO_MODE ? 'Saved (demo mode — not written to a sheet).' : `Saved ${result.saved} to the Steward.`);
       viewData = null; resetForm(); loadViews();
+      if (addedProp) loadConfig(); // pick up the new property in every picker
     } else {
       btn.disabled = false; btn.textContent = label;
       showToast(result.reason || "Couldn't save — try again.");
